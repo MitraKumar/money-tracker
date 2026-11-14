@@ -35,7 +35,7 @@ export function ChatScreen() {
     <ConnectionStatus />
     <VStack gap={8} width="100%">
       <VStack as="section" gap={5} aria-label="Chat entry">
-        <Text type="supporting">Chat preview · example responses only. Messages stay in this tab until reload or sign-out; they are not saved to your account.</Text>
+        <Text type="supporting">AI suggests one income or expense for you to review. Transactions are saved only after confirmation. Chat history stays in this tab until reload or sign-out.</Text>
         <VStack style={{height:"min(65dvh, 44rem)", minHeight:"22rem", width:"100%"}} gap={0}>
           <VStack gap={3} style={{height:"100%", minHeight:0}}>
             <ChatMessageList align="top" style={{flex:"1 1 0%", minHeight:0, overflowY:"auto", overflowX:"hidden"}}>
@@ -48,7 +48,7 @@ export function ChatScreen() {
                 <ChatSystemMessage variant="divider">{day}</ChatSystemMessage>
                 {lines.map(line => <ChatMessage key={line.id} sender={line.sender}>
                   <ChatMessageBubble variant={line.sender === "user" ? "filled" : "ghost"}
-                    name={line.sender === "user" ? "You" : "Money Tracker · example"}
+                    name={line.sender === "user" ? "You" : "Money Tracker"}
                     metadata={!line.previewId ? <Timestamp value={line.at} format="time" timezoneID="Asia/Kolkata" /> : undefined}>
                     <Text style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{line.text}</Text>
                   </ChatMessageBubble>
@@ -67,7 +67,7 @@ export function ChatScreen() {
               </VStack>}
               {activePreview && !["saving","unknown","checking"].includes(activePreview.status) &&
                 <Button label="Start separate entry" onClick={() => {focusSeparateEntry.current=true;startSeparateEntry();}} />}
-              <ChatComposer value={text} onChange={changeText} onSubmit={parse} isDisabled={actionsDisabled}
+              <ChatComposer value={text} onChange={changeText} onSubmit={() => {void parse();}} isDisabled={actionsDisabled}
                 input={<ChatComposerInput handleRef={input} label="Expense or income" value={text} onChange={changeText}
                   placeholder="Type an expense or income…" maxRows={4} isDisabled={actionsDisabled}
                   pasteAsToken={false} hasHistory={false} enterKeyHint="enter"
@@ -78,12 +78,12 @@ export function ChatScreen() {
                     // Own submission so rejected/failed sends retain the controlled draft.
                     event.preventDefault();
                     if (window.matchMedia("(pointer: coarse)").matches) input.current?.insertText("\n");
-                    else parse();
+                    else void parse();
                   }} />}
                 headerContext={<Text type="supporting">{text.length}/500</Text>}
-                sendButton={<ChatSendButton onSend={parse} isDisabled={actionsDisabled||!text.trim()||text.length>500} />}
+                sendButton={<ChatSendButton onSend={() => {void parse();}} isDisabled={actionsDisabled||!text.trim()||text.length>500} />}
                 footerActions={<Button label="Add manually" onClick={startManual} isDisabled={actionsDisabled||entryBlocked} />}
-                status={chatError ? {type:"error",message:"Simulated send error. Your message is still here. Try Send again or add it manually."} : text.length>500 ? {type:"error",message:"Keep your message within 500 characters before sending."} : undefined} />
+                status={chatError ? {type:"error",message:message} : text.length>500 ? {type:"error",message:"Keep your message within 500 characters before sending."} : undefined} />
               <Text type="supporting">Enter sends on desktop · Shift+Enter adds a line. On mobile, tap Send.</Text>
             </VStack>
           </VStack>
@@ -91,8 +91,8 @@ export function ChatScreen() {
             <Dialog isOpen={!!draft} onOpenChange={open => {if (!open && !busy && !uncertainSave) cancelDraft();}}
               purpose={busy || uncertainSave ? "required" : "info"} width="36rem" padding={0} maxHeight="calc(100dvh - var(--spacing-8))">
               <VStack padding={5} gap={0} style={{flexShrink:0}}>
-                <DialogHeader title={<Text type="large" weight="semibold" style={{fontFamily:"var(--font-family-body)"}}>Add transaction</Text>}
-                  subtitle="Enter an income or expense · INR" hasDivider={false}
+                <DialogHeader title={<Text type="large" weight="semibold" style={{fontFamily:"var(--font-family-body)"}}>{draft?.draftId ? "Review AI suggestion" : "Add transaction"}</Text>}
+                  subtitle={draft?.draftId ? "Check every detail before saving · INR" : "Enter an income or expense · INR"} hasDivider={false}
                   onOpenChange={busy || uncertainSave ? undefined : open => {if (!open) cancelDraft();}} />
               </VStack>
               {draft && <>

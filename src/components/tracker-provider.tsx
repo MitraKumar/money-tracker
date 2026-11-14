@@ -90,7 +90,7 @@ function useTrackerState() {
       setReady(false); setUser(null); setLedger(null); setDraft(null); setText(""); setMonth("");
       previewAction({type:"reset"}); setPreviewScenario("expense");
       setChatLines([]); setChatError(false); setHistoryLoaded(false); setFailNextChat(false);
-      saveOperation.current = null; setUncertainSave(false);
+      saveOperation.current = null; parseOperation.current = null; setUncertainSave(false);
       setMessage("You have signed out.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not sign out. Please retry."); }
     finally { setBusy(false); }
@@ -99,25 +99,45 @@ function useTrackerState() {
     const data = await api<Ledger>(`/api/transactions?month=${encodeURIComponent(target)}`);
     setLedger(data); setMonth(data.month);
   }
-  function parse() {
-    if (chatSending.current || busy || !ready || draft || (activePreview && activePreview.status !== "needs-clarification") || !text.trim() || text.length > 500) return;
-    chatSending.current = true;
-    const at = new Date().toISOString();
-    if (failNextChat) {
-      setFailNextChat(false); setChatError(true);
-    } else {
-      const previewId = activePreview?.id ?? crypto.randomUUID();
-      if (activePreview) previewAction({type:"reply",id:previewId,text});
-      else previewAction({type:"add",id:previewId,scenario:previewScenario,date:localDate()});
+  const parseOperation = useRef<{ text: string; requestId: string } | null>(null);
+  async function parse() {
+    if (chatSending.current || busy || !ready || draft || activePreview || !text.trim() || text.length > 500) return;
+    const input = text.trim();
+    if (parseOperation.current?.text !== input) parseOperation.current = { text: input, requestId: crypto.randomUUID() };
+    chatSending.current = true; setBusy(true); setChatError(false);
+    setMessage("Organizing your entry…");
+    try {
+      const result = await api<
+        { status: "candidate"; entry: Entry; draftId: string } |
+        { status: "clarify" | "unsupported" | "unavailable"; message: string; draftId: string }
+      >("/api/parse", parseOperation.current);
+      const at = new Date().toISOString();
+      if (result.status === "candidate") {
+        const entry = entrySchema.parse(result.entry);
+        setDraft({ entry, draftId: result.draftId });
+        setMessage("Review the AI suggestion. Nothing is saved until you confirm.");
+        setText("");
+      } else {
+        setMessage(result.message);
+        setChatError(result.status === "unavailable");
+        if (result.status !== "unavailable") setText("");
+      }
       setChatLines(lines => [...lines,
-        { id: crypto.randomUUID(), sender: "user", text: text.trim(), at },
-        ...(activePreview ? [] : [{ id: crypto.randomUUID(), sender: "assistant" as const,
-          text: "Example response: review the sample transaction below. It is separate from your real ledger.", at, previewId }]),
+        { id: crypto.randomUUID(), sender: "user", text: input, at },
+        { id: crypto.randomUUID(), sender: "assistant", text: result.status === "candidate"
+          ? "Review the suggested transaction in the confirmation form. Nothing has been saved."
+          : result.message, at },
       ]);
-      if (!activePreview || entrySchema.safeParse({...activePreview.entry,amount:text.trim()}).success) setText("");
-      setChatError(false);
+      // A completed unavailable result needs a fresh operation for an explicit retry.
+      parseOperation.current = null;
+    } catch (error) {
+      handleExpired(error);
+      setChatError(true);
+      setMessage(error instanceof Error ? error.message : "Could not organize your entry. Retry or add it manually.");
+      if (error instanceof RequestError) parseOperation.current = null;
+    } finally {
+      chatSending.current = false; setBusy(false);
     }
-    chatSending.current = false;
   }
   function loadChatHistory() {
     if (historyLoaded) return;

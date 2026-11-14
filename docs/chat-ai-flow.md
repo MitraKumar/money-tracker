@@ -209,3 +209,7 @@ Before release, verify:
 - AI failures and exhausted quotas leave manual entry functional.
 - Every dashboard total matches confirmed transaction data, including after edits/deletion.
 - Chat expiration or conversation deletion preserves confirmed ledger entries and removes raw text as intended.
+
+## Current POC chat connection
+
+The UI now sends authenticated requests to the existing `POST /api/parse` endpoint instead of generating expense fixtures. Validated candidates open the editable confirmation dialog with the server draft ID; only Confirm posts to `/api/transactions`. Completed unavailable responses retain the text and use a new request key on explicit retry; network failures retain the operation key for replay. Clarify/unsupported responses appear in the transcript and request a complete replacement entry rather than implementing persistent clarification. Chat history is still tab memory. The planned conversation/draft lifecycle above remains incomplete.

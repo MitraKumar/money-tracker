@@ -69,3 +69,5 @@ Follow [Google auth setup](docs/google-auth-setup.md). Configure all OAuth secre
 Historical deployment details: [POC deployment](docs/poc-deployment.md). Design references: [UI](docs/ui-plan.md), [database](docs/database-architecture.md), [chat/AI](docs/chat-ai-flow.md).
 
 The installation audit reports seven moderate development-tooling findings through TypeScript ESLint's transitive minimatch dependency. Compatible audit updates did not resolve them; no forced major override was applied. Astryx diagnostics also flag external font loading for manual review. Current auth overhead and quotas still require measurement before promising free production capacity.
+
+Chat Send is connected to the authenticated Worker AI parser. Successful suggestions open the review dialog and require explicit confirmation before saving. Chat history remains in tab memory; clarification currently requires resending the complete entry. The existing POC limits apply (10 parses per account and 50 app-wide per UTC day); manual entry remains available during AI failures or quota exhaustion.

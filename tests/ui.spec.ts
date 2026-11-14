@@ -268,3 +268,52 @@ test("rejected example saves retain edits and unavailable responses offer manual
   await expect(page.getByRole("heading",{name:"Chat entry unavailable",exact:true})).toBeVisible();
   await expect(page.getByRole("button",{name:"Add manually",exact:true})).toBeEnabled();
 });
+
+test("live AI candidate requires confirmation and saves edited extracted values", async ({page}) => {
+  const draftId = "5d768d9e-8ebe-4aef-8aa7-2935dd165ab8";
+  let writes = 0;
+  await page.route("**/api/parse", async route => {
+    expect(route.request().postDataJSON().text).toBe("Received 45000 salary");
+    await route.fulfill({json:{status:"candidate",draftId,entry:{
+      type:"income",amount:"45000",category:"salary",date:"2026-11-14",description:"Salary",
+    }}});
+  });
+  await page.route("**/api/transactions", async route => {
+    if(route.request().method() !== "POST") {await route.fallback();return;}
+    const payload = route.request().postDataJSON();
+    expect(payload.draftId).toBe(draftId);
+    expect(payload.entry.amount).toBe("45001");
+    writes++;
+    await route.fulfill({json:{transaction:{...payload.entry,id:"saved-ai",amount_minor:4500100,created_at:Date.now()}}});
+  });
+  await page.goto("/chat/");
+  await page.getByRole("textbox",{name:"Expense or income"}).fill("Received 45000 salary");
+  await page.getByRole("button",{name:"Send",exact:true}).click();
+  const dialog = page.getByRole("dialog",{name:"Review AI suggestion",exact:true});
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("textbox",{name:"Amount (INR)"})).toHaveValue("45000");
+  expect(writes).toBe(0);
+  await dialog.getByRole("textbox",{name:"Amount (INR)"}).fill("45001");
+  await dialog.getByRole("button",{name:"Confirm and save",exact:true}).click();
+  await expect(dialog).not.toBeVisible();
+  expect(writes).toBe(1);
+});
+
+test("live AI unavailable retry retains text and uses a fresh completed operation", async ({page}) => {
+  const keys: string[] = [];
+  await page.route("**/api/parse",async route => {
+    keys.push(route.request().postDataJSON().requestId);
+    await route.fulfill({json:{status:"unavailable",draftId:crypto.randomUUID(),message:"AI is unavailable. Retry or add manually."}});
+  });
+  await page.goto("/chat/");
+  const input=page.getByRole("textbox",{name:"Expense or income"});
+  await input.fill("Spent 75 on taxi");
+  await page.getByRole("button",{name:"Send",exact:true}).click();
+  await expect(input).toHaveText("Spent 75 on taxi");
+  await expect(page.getByRole("button",{name:"Send",exact:true})).toBeEnabled();
+  await page.getByRole("button",{name:"Send",exact:true}).click();
+  await expect.poll(()=>keys.length).toBe(2);
+  expect(keys[0]).not.toBe(keys[1]);
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.getByRole("button",{name:"Add manually",exact:true})).toBeEnabled();
+});

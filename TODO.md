@@ -11,7 +11,7 @@ This is the implementation tracker across sessions. The architecture documents d
 | Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
 | Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
 | Next task | **UI-04 — reusable manual transaction form; AUTH-01 real sign-in verification remains pending** |
-| Active task | **None — temporary review flag removed; sign-in restored** |
+| Active task | **None — POC chat reconnected to authenticated AI API** |
 | External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
 
 ## How to use this tracker
@@ -141,3 +141,5 @@ Append one row after each implementation session. Link the commit only if one wa
 | Modal visual refinement | Padded body-font title/subtitle; reduced duplicate copy; responsive two-column fields on desktop and single column on mobile; aligned footer actions. Lint/types/build/Astryx passed (existing font warnings). Four Chromium viewport checks passed, desktop/mobile screenshots inspected. Deployed 2fb1451e-6761-406d-8f85-21f7c35ca4da | UI-04 remains open; temporary review mode remains | Not committed |
 
 | Restore sign-in | Removed NEXT_PUBLIC_UI_REVIEW, deploy:review command, review-only provider/shell/settings branches, and README instructions. Normal session reads, sign-in gating, and authenticated ledger operations restored. Lint/types/build/Astryx passed (existing font warnings); Chromium mocked-session checks verified five gated routes without signed-out ledger reads and signed-in modal access. Deployed edb566cc-dada-4428-98ea-323c55dfbd1a | UI-04 next; real Google callback verification remains pending. Changes not committed | Not committed |
+
+| POC AI reconnection | Replaced fixture Send with authenticated /api/parse; validates candidates and opens editable AI confirmation modal linked to server draft. Saves require explicit confirmation; failures retain text, completed unavailable retries use fresh keys, transport retries retain keys. Lint/types/unit/build/Astryx passed (existing font warnings); six focused browser cases passed across three widths for real API-bound candidate/save behavior and unavailable retries using mocks. Live health reports AI enabled/D1 connected; anonymous parser returns 401. Deployed 5883d792-bf51-411f-ab1c-1f3595faa579 | Real signed-in inference after deployment still needs verification. Full persistent chat/clarification remains open; older fixture UI scenarios need migration to API mocks. UI-04 remains open. No commit/push | Not committed |
