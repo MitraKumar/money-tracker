@@ -106,3 +106,57 @@ test("missing OAuth configuration disables sign in and offers no browser-demo by
   await expect(page.getByText("Google sign-in setup is pending.",{exact:false})).toBeVisible();
   await expect(page.getByRole("link",{name:/browser demo/})).toHaveCount(0);
 });
+
+test("chat prompts, multiline and IME input, retry, and grouped fixture history", async ({ page }) => {
+  let parseCalls = 0;
+  await page.route("**/api/parse", route => {parseCalls++;return route.abort();});
+  await page.goto("/chat/");
+  const input = page.getByRole("textbox", {name:"Expense or income",exact:true});
+  await page.getByRole("button", {name:"Spent ₹120 on lunch",exact:true}).click();
+  await expect(input).toHaveValue("Spent ₹120 on lunch");
+  await expect(page.getByText("Money Tracker · example",{exact:true})).toHaveCount(0);
+  await input.press("Shift+Enter");
+  await input.press("a");
+  await expect(input).toHaveValue("Spent ₹120 on lunch\na");
+  await input.dispatchEvent("compositionstart");
+  await input.press("Enter");
+  await expect(input).not.toHaveValue("");
+  await input.dispatchEvent("compositionend");
+  await page.getByRole("button",{name:"Simulate next send error",exact:true}).click();
+  const retained = await input.inputValue();
+  await page.getByRole("button",{name:"Send message",exact:true}).click();
+  await expect(input).toHaveValue(retained);
+  await expect(page.getByRole("region",{name:"Chat entry",exact:true}).getByText(/Simulated send error/)).toBeVisible();
+  await navigation(page).getByRole("link",{name:"Overview",exact:true}).click();
+  await navigation(page).getByRole("link",{name:"Chat",exact:true}).click();
+  await expect(input).toHaveValue(retained);
+  await input.press("Enter");
+  await expect(input).toHaveValue("");
+  await expect(page.getByRole("log").getByText(/Example response:/)).toBeVisible();
+  await page.getByRole("button",{name:"Show example history",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Show example history",exact:true})).toBeDisabled();
+  expect(await page.getByRole("log").locator("section").count()).toBe(2);
+  expect(parseCalls).toBe(0);
+});
+
+test.describe("touch keyboard", () => {
+  test.use({hasTouch:true});
+
+test("composer controls remain reachable in a reduced mobile viewport", async ({page}) => {
+  await page.setViewportSize({width:390,height:480});
+  await page.goto("/chat/");
+  const input=page.getByRole("textbox",{name:"Expense or income",exact:true});
+  await input.fill("Lunch 120");
+  await input.press("Enter");
+  await expect(input).toHaveValue("Lunch 120\n");
+  await page.getByRole("button",{name:"Send message",exact:true}).scrollIntoViewIfNeeded();
+  const send=await page.getByRole("button",{name:"Send message",exact:true}).boundingBox();
+  expect(send!.y).toBeGreaterThanOrEqual(0);
+  expect(send!.y+send!.height).toBeLessThanOrEqual(480);
+  await page.getByRole("button",{name:"Send message",exact:true}).click();
+  await expect(input).toHaveValue("");
+  await expect(page.getByRole("button",{name:"Add manually",exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+});
+
+});

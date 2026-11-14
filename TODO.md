@@ -7,11 +7,11 @@ This is the implementation tracker across sessions. The architecture documents d
 | Item | Status |
 | --- | --- |
 | Foundation | Next.js + TypeScript + Astryx Matcha starter implemented |
-| Latest implementation commit | `935f5b8` — UI shell; Google authentication changes are not committed yet |
+| Latest implementation commit | UI-02 — chat composition and fixture history (this commit) |
 | Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
 | Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
-| Next task | **AUTH-01: configure Google OAuth, deploy, and verify real sign-in** |
-| Active task | **AUTH-01 — deployed/configured; real Google sign-in verification pending** |
+| Next task | **UI-03 — transaction preview and clarification fixtures; AUTH-01 real sign-in verification remains pending** |
+| Active task | **None — UI-02 completed with fixture responses** |
 | External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
 
 ## How to use this tracker
@@ -44,7 +44,7 @@ The proof is a deliberately smaller implementation. The API/database/UI tasks be
 Build realistic UI states before connecting the backend. Keep fixture data clearly separated from live data; no pretend successful saves.
 
 - [x] **UI-01 — Application shell and routes** · Depends on SETUP-02. Add `/login`, `/setup`, `/chat`, `/overview`, `/transactions`, `/settings`, shared desktop navigation, mobile bottom navigation, and profile menu. Done when each route survives direct navigation in the static export, current navigation is identified accessibly, and layouts work on mobile/desktop. Keep arbitrary record/thread IDs in query parameters.
-- [ ] **UI-02 — Chat composition and history** · Depends on UI-01. Add Astryx chat layout, date-grouped messages, timestamps, example prompts that fill without sending, composer, and manual-entry access. Done when keyboard/IME behavior is correct, input survives simulated errors, and the mobile keyboard does not cover controls. Use fixture responses only at this stage.
+- [x] **UI-02 — Chat composition and history** · Depends on UI-01. Add Astryx chat layout, date-grouped messages, timestamps, example prompts that fill without sending, composer, and manual-entry access. Done when keyboard/IME behavior is correct, input survives simulated errors, and the mobile keyboard does not cover controls. Use fixture responses only at this stage.
 - [ ] **UI-03 — Transaction preview and clarification** · Depends on UI-02. Build draft states, editable amount/type/category/date/description, one active clarification context, cancel, saving, saved receipt, and unknown-save status. Done when fixture interactions show every state accurately, category edits require no AI call, and nothing appears saved before a simulated acknowledgment.
 - [ ] **UI-04 — Manual transaction form** · Depends on UI-01. Build reusable amount, direction, category, date, and description inputs. Done when errors are inline, values are retained on failure, and the same form can support draft and saved-record editing. Define a typed submit boundary for later API integration.
 - [ ] **UI-05 — Transactions view** · Depends on UI-04. Desktop table/mobile list, filters, cursor/load-more UI, details, edit, delete confirmation, export scope, and conflict/loading/empty states. Done when fixture controls work and no destructive action silently succeeds.
@@ -112,6 +112,8 @@ Append one row after each implementation session. Link the commit only if one wa
 | UI-01 | Static routes and shared Astryx shell, desktop/sidebar and mobile navigation, profile dialog, route-preserved draft state, real summary/transaction views, search/type filters; unit/lint/type/build/Astryx/local API checks passed; 6 browser scenarios across 1440/390/320 widths passed locally and on the live deployment | Continue UI-02; deployed version `653d5712-cb5f-4b3d-8a51-c96ee07dc392`; full transcript, charts, full record actions, and Google account support remain incomplete | `935f5b8` |
 
 | AUTH-01 (partial) | Google auth and account-ledger implementation prepared; local migrations, signed-session/isolation tests, static checks and 15 fixture-based UI checks passed | User deployed/configured Cloudflare; live API protection and Google OAuth initiation verified; real Google token exchange remains unverified | Not committed |
+
+| UI-02 | Astryx chat layout/composer, day-grouped transcript and timestamps, fill-only prompts, example history, explicit simulated send failure/retry, navigation-preserved input/history, desktop Enter/Shift+Enter and IME guards, touch Return and manual access; type/lint/static build/unit checks and all 21 responsive Playwright scenarios passed; Astryx has zero failures (existing external-font warnings) | Continue UI-03. Chat responses/history are tab-memory fixtures; no parse/save request is issued by chat. Existing manual confirmation still uses the real ledger API. Physical software-keyboard checks remain in QA-02; AUTH-01 verification remains open. No deployment | This commit |
 
 ## References
 

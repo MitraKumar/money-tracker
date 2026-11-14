@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { entrySchema, localDate, money, type Entry, type Transaction } from "@/lib/ledger";
 
+export type ChatLine = { id: string; sender: "user" | "assistant"; text: string; at: string };
+
 type Ledger = { transactions: Transaction[]; summary: { income: number; expenses: number }; month: string };
 type Draft = { entry: Entry; draftId: string | null };
 export type AppUser = { id: string; name: string; email: string; image?: string | null };
@@ -30,6 +32,11 @@ function useTrackerState() {
   const [configured, setConfigured] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [chatLines, setChatLines] = useState<ChatLine[]>([]);
+  const [chatError, setChatError] = useState(false);
+  const [failNextChat, setFailNextChat] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const chatSending = useRef(false);
   const [text, setText] = useState("");
   const [message, setMessage] = useState("Checking your sign-in…");
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -37,7 +44,6 @@ function useTrackerState() {
   const [month, setMonth] = useState("");
   const [uncertainSave, setUncertainSave] = useState(false);
   const saveOperation = useRef<Save | null>(null);
-  const parseOperation = useRef<{ text: string; requestId: string } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -77,7 +83,8 @@ function useTrackerState() {
     try {
       await api("/api/auth/sign-out", {});
       setReady(false); setUser(null); setLedger(null); setDraft(null); setText(""); setMonth("");
-      saveOperation.current = null; parseOperation.current = null; setUncertainSave(false);
+      setChatLines([]); setChatError(false); setHistoryLoaded(false); setFailNextChat(false);
+      saveOperation.current = null; setUncertainSave(false);
       setMessage("You have signed out.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not sign out. Please retry."); }
     finally { setBusy(false); }
@@ -86,20 +93,29 @@ function useTrackerState() {
     const data = await api<Ledger>(`/api/transactions?month=${encodeURIComponent(target)}`);
     setLedger(data); setMonth(data.month);
   }
-  async function parse() {
-    setBusy(true); setMessage("Organizing your entry…");
-    if (parseOperation.current?.text !== text) parseOperation.current = { text, requestId: crypto.randomUUID() };
-    try {
-      const result = await api<{ status: string; entry?: Entry; draftId: string; message?: string }>("/api/parse", parseOperation.current);
-      if (result.status === "candidate" && result.entry) {
-        setDraft({ entry: result.entry, draftId: result.draftId });
-        setMessage("Review the details below. Nothing has been saved to your ledger yet.");
-      } else {
-        if (result.status === "unavailable") parseOperation.current = null;
-        setMessage(result.message || "Please add more detail or use manual entry. For this demo, resend a complete sentence to clarify.");
-      }
-    } catch (error) { handleExpired(error); setMessage(error instanceof Error ? error.message : "Chat entry failed. Manual entry is available."); }
-    finally { setBusy(false); }
+  function parse() {
+    if (chatSending.current || busy || !ready || draft || !text.trim() || text.length > 500) return;
+    chatSending.current = true;
+    const at = new Date().toISOString();
+    if (failNextChat) {
+      setFailNextChat(false); setChatError(true);
+    } else {
+      setChatLines(lines => [...lines,
+        { id: crypto.randomUUID(), sender: "user", text: text.trim(), at },
+        { id: crypto.randomUUID(), sender: "assistant", text: "Example response: your entry would be organized for review here. Nothing was saved. Use Add manually to record a real transaction.", at },
+      ]);
+      setText(""); setChatError(false);
+    }
+    chatSending.current = false;
+  }
+  function loadChatHistory() {
+    if (historyLoaded) return;
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday.setHours(12, 0, 0, 0);
+    setChatLines(lines => [
+      { id: "example-user", sender: "user", text: "Spent ₹120 on lunch", at: yesterday.toISOString() },
+      { id: "example-assistant", sender: "assistant", text: "Example history: lunch expense received for review. This is sample conversation text, not a saved record.", at: yesterday.toISOString() }, ...lines,
+    ]);
+    setHistoryLoaded(true);
   }
   async function save() {
     if (!draft) return;
@@ -109,7 +125,7 @@ function useTrackerState() {
     setBusy(true); setMessage("Saving your confirmed entry…");
     try {
       const result = await api<{ transaction: Transaction }>("/api/transactions", saveOperation.current);
-      saveOperation.current = null; setUncertainSave(false); setDraft(null); setText(""); parseOperation.current = null;
+      saveOperation.current = null; setUncertainSave(false); setDraft(null); setText("");
       setMessage(`Saved ${money(result.transaction.amount_minor)} under ${label(result.transaction.category)} for ${result.transaction.date}.`);
       try { await refresh(result.transaction.date.slice(0, 7)); }
       catch { setMessage("Your entry was saved. Reload the page to refresh your records."); }
@@ -127,7 +143,7 @@ function useTrackerState() {
     setMessage("Enter the details and confirm to save.");
   }
   function cancelDraft() { setDraft(null); setMessage("Draft cancelled. Nothing saved."); }
-  function changeText(value: string) { setText(value); parseOperation.current = null; }
+  function changeText(value: string) { setText(value); }
   function changeType(value: Entry["type"]) {
     if (draft && !uncertainSave) setDraft({ ...draft, entry: { ...draft.entry, type: value, category: value === "income" ? "other-income" : "other-expense" } });
   }
@@ -136,7 +152,7 @@ function useTrackerState() {
     try { await refresh(); } catch (error) { handleExpired(error); setMessage(error instanceof Error ? error.message : "Could not load this month."); }
     finally { setBusy(false); }
   }
-  return { user, authLoading, configured, signIn, signOut, ready, busy, text, message, draft, ledger, month, uncertainSave,
+  return { chatLines, chatError, failNextChat, setFailNextChat, historyLoaded, loadChatHistory, user, authLoading, configured, signIn, signOut, ready, busy, text, message, draft, ledger, month, uncertainSave,
     setMonth, parse, save, edit, startManual, cancelDraft, changeText, changeType, loadMonth };
 }
 

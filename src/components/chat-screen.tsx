@@ -1,4 +1,7 @@
 "use client";
+import { useRef } from "react";
+import { ChatLayout, ChatComposer, ChatMessage, ChatMessageList } from "@astryxdesign/core/Chat";
+import { Timestamp } from "@astryxdesign/core/Timestamp";
 import Link from "next/link";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
@@ -15,24 +18,55 @@ import { label, useTracker } from "./tracker-provider";
 import { ConnectionStatus, PageHeading, Summary, TransactionRows } from "./tracker-parts";
 
 export function ChatScreen() {
-  const {ready,busy,text,draft,ledger,uncertainSave,parse,save,edit,startManual,cancelDraft,changeText,changeType}=useTracker();
+  const {ready,busy,text,draft,ledger,uncertainSave,parse,save,edit,startManual,cancelDraft,changeText,changeType,chatLines,chatError,failNextChat,setFailNextChat,historyLoaded,loadChatHistory}=useTracker();
+  const composing = useRef(false);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const groups = Map.groupBy(chatLines, line => new Date(line.at).toLocaleDateString("en-IN", {year:"numeric",month:"long",day:"numeric",timeZone:"Asia/Kolkata"}));
   const actionsDisabled=busy||!ready||!!draft;
   return <>
     <PageHeading eyebrow="YOUR DAILY CHECK-IN" title="Small entries. A clearer picture." description="Tell us what came in or went out. Review every detail before it becomes a record." />
     <ConnectionStatus />
     <Grid columns={{minWidth:280,max:2}} gap={8} align="start">
       <VStack as="section" gap={5} aria-label="Chat entry">
-        <TextArea label="Expense or income" value={text} onChange={changeText}
-          placeholder="Spent ₹30 on a rickshaw to work" maxLength={500} width="100%" rows={3} isDisabled={busy||!!draft} />
-        <HStack gap={3} wrap="wrap">
-          <Button label="Organize with AI" variant="primary" onClick={()=>void parse()} isDisabled={actionsDisabled||!text.trim()||text.length>500} isLoading={busy&&!draft} />
-          <Button label="Add manually" onClick={startManual} isDisabled={actionsDisabled} />
+        <Text type="supporting">Chat preview · example responses only. Messages stay in this tab until reload or sign-out; they are not saved to your account.</Text>
+        <HStack gap={2} wrap="wrap">
+          <Button label="Show example history" onClick={loadChatHistory} isDisabled={historyLoaded} />
+          <Button label={failNextChat ? "Error simulation armed" : "Simulate next send error"} onClick={() => setFailNextChat(true)} isDisabled={failNextChat} />
         </HStack>
-        <Text type="supporting">Try an entry</Text>
-        <VStack gap={1} hAlign="start">
-          {["Spent 30 Rs on Rickshaw to work","Got 15000 salary today"].map(example=><Button key={example} label={example} variant="ghost" onClick={()=>changeText(example)} isDisabled={actionsDisabled} />)}
+        <VStack style={{height:"min(65dvh, 44rem)", minHeight:"22rem", width:"100%"}} gap={0}>
+          <ChatLayout density="compact" composer={
+            <VStack gap={2} onCompositionStartCapture={() => {composing.current=true;}}
+              onCompositionEndCapture={() => {composing.current=false;}}
+              onKeyDownCapture={event => {
+                if(event.target === input.current && event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && !composing.current && event.keyCode !== 229 && !window.matchMedia("(pointer: coarse)").matches) {
+                  event.preventDefault(); parse();
+                }
+              }}>
+              <ChatComposer value={text} onChange={changeText} onSubmit={parse} isDisabled={actionsDisabled}
+                input={<TextArea ref={input} label="Expense or income" value={text} onChange={changeText}
+                  placeholder="Type an expense or income…" htmlMaxLength={500} width="100%" rows={2} isDisabled={actionsDisabled} />}
+                sendButton={<Button label="Send message" variant="primary" onClick={parse} isDisabled={actionsDisabled||!text.trim()||text.length>500} />}
+                footerActions={<Button label="Add manually" onClick={startManual} isDisabled={actionsDisabled} />}
+                status={chatError ? {type:"error",message:"Simulated send error. Your message is still here. Try Send message again or add it manually."} : undefined} />
+              <Text type="supporting">Enter sends on desktop · Shift+Enter adds a line. On mobile, tap Send.</Text>
+            </VStack>
+          }>
+            <ChatMessageList align="top">
+              {chatLines.length === 0 ? <VStack gap={3} padding={3}>
+                <Heading level={2} style={{fontFamily:"var(--font-family-body)"}}>What came in or went out?</Heading>
+                <Text>Try an entry. Choose a prompt to edit it before sending.</Text>
+                {["Spent ₹120 on lunch", "Received ₹25,000 salary today", "Paid ₹800 for groceries yesterday"].map(example =>
+                  <Button key={example} label={example} variant="ghost" isDisabled={actionsDisabled} onClick={() => {changeText(example);input.current?.focus();}} />)}
+              </VStack> : [...groups].map(([day, lines]) => <VStack key={day} gap={4} as="section" aria-label={day}>
+                <Text type="supporting" weight="semibold">{day}</Text>
+                {lines.map(line => <ChatMessage key={line.id} sender={line.sender} name={line.sender === "user" ? "You" : "Money Tracker · example"}
+                  metadata={<Timestamp value={line.at} format="time" timezoneID="Asia/Kolkata" />}>
+                  <Text style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{line.text}</Text>
+                </ChatMessage>)}
+              </VStack>)}
+            </ChatMessageList>
+          </ChatLayout>
         </VStack>
-        <Text type="supporting">One complete entry at a time. You can always enter details manually.</Text>
             {draft && <Card>
               <VStack gap={4}>
                 <Heading level={3} style={{ fontFamily: "var(--font-family-body)" }}>Review transaction</Heading>
