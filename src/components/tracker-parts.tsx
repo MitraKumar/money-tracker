@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Button } from "@astryxdesign/core/Button";
 import { Grid } from "@astryxdesign/core/Grid";
 import { Heading } from "@astryxdesign/core/Heading";
-import { HStack } from "@astryxdesign/core/HStack";
 import { List, ListItem } from "@astryxdesign/core/List";
 import { Text } from "@astryxdesign/core/Text";
 import { MonthPicker } from "./month-picker";
@@ -31,11 +30,8 @@ export function Summary() {
   </Grid>;
 }
 export function MonthFilter() {
-  const { month, setMonth, loadMonth, busy, ready } = useTracker();
-  return <HStack wrap="wrap" gap={3} vAlign="end">
-    <MonthPicker value={month} onChange={setMonth} disabled={busy || !ready} />
-    <Button label="Load month" onClick={() => void loadMonth()} isDisabled={busy || !ready} />
-  </HStack>;
+  const { month, loadMonth, busy, ready } = useTracker();
+  return <MonthPicker value={month} onChange={value => void loadMonth(value)} disabled={busy || !ready} />;
 }
 export function TransactionRows({ transactions }: { transactions: Transaction[] }) {
   if (!transactions.length) return <VStack gap={3} paddingBlock={6}>

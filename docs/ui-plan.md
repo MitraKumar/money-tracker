@@ -96,7 +96,7 @@ Only one clarification is active in the composer at a time. Show “Replying to:
 
 ## 3. Monthly overview
 
-Use the shared month/year picker on Overview and Transactions: a calendar trigger opens a twelve-month grid with a year field and previous/next-year controls; desktop uses a popover and mobile a bottom sheet. Choosing a month stages the YYYY-MM value; Load month refreshes records, and Cancel discards year browsing.
+Use the shared month/year picker on Overview and Transactions: a calendar trigger opens a twelve-month grid with a year field and previous/next-year controls; desktop uses a popover and mobile a bottom sheet. Choosing a month immediately refreshes records using its YYYY-MM value. The picker is disabled during loading; failed requests preserve the last successfully loaded month and records. Cancel discards year browsing.
 
 Place the month selector at the top, followed by three summary values: Income, Expenses, and Net cash flow. Explain net cash flow as recorded income minus expenses; do not label it Balance or Savings.
 

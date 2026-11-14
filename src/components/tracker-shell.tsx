@@ -59,7 +59,7 @@ function Profile() {
         {isMobile ? <IconButton label="Settings" tooltip="Settings" icon={<Icon icon={SettingsIcon} />} href="/settings" as={Link} onClick={() => setOpen(false)} />
           : <Button label="Settings" icon={<Icon icon={SettingsIcon} />} href="/settings" as={Link} onClick={() => setOpen(false)} />}
       </VStack>
-      <Button label="Sign out" variant="destructive" isDisabled={busy} onClick={() => { setOpen(false); void signOut(); }} />
+      <Button label="Sign out" variant="destructive" style={{color:"var(--color-on-dark)",backgroundColor:"var(--color-text-error)"}} isDisabled={busy} onClick={() => { setOpen(false); void signOut(); }} />
     </VStack>}>
     <Button label="Profile" aria-label="Profile" variant="secondary" icon={<Avatar src={user?.image ?? undefined} name={user?.name || user?.email} size="sm" tooltip={false} />} />
   </Popover>;

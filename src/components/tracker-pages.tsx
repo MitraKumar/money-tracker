@@ -42,11 +42,9 @@ export function SettingsScreen() {
     <List edge="flush">
       <ListItem label="Currency" description="Your ledger uses one currency." endContent={<Text>INR · Indian rupee</Text>} />
       <ListItem label="Accounting timezone" description="Used to interpret today and yesterday." endContent={<Text>Asia/Kolkata</Text>} />
-      <ListItem label="Access" description="Sign in with the same Google account to access your records on other devices." endContent={<Text>{user?.email}</Text>} />
-      <ListItem label="Retention" description="Saved transactions belong to your account. Signing out or session expiry does not delete them." />
     </List>
     <VStack gap={3}>
-      <HStack wrap="wrap" gap={3}><Button label="Sign out" variant="destructive" onClick={()=>void signOut()} isDisabled={busy} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
+      <HStack wrap="wrap" gap={3}><Button label="Sign out" variant="destructive" style={{color:"var(--color-on-dark)",backgroundColor:"var(--color-text-error)"}} onClick={()=>void signOut()} isDisabled={busy} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
     </VStack>
   </>;
 }

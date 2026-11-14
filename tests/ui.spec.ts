@@ -329,7 +329,7 @@ test("monthly reporting reconciles charts and month switching without export", a
   });
   await page.goto("/overview/");
   await expect(page.getByRole("img",{name:/Daily income and expenses for 2026-11/})).toBeVisible();
-  const categories = page.getByRole("region",{name:"Where it went"});
+  const categories = page.getByRole("region",{name:"Expenses",exact:true});
   await expect(categories).toContainText("₹25.00");
   await expect(categories.getByRole("img",{name:/Expense breakdown/})).toBeVisible();
   await expect(categories.locator("svg[role=img] path")).toHaveCount(2);
@@ -339,7 +339,6 @@ test("monthly reporting reconciles charts and month switching without export", a
   await expect(page.getByRole("button",{name:/Export/})).toHaveCount(0);
   await page.getByRole("button",{name:"Month: November 2026",exact:true}).click();
   await page.getByRole("button",{name:"December",exact:true}).click();
-  await page.getByRole("button",{name:"Load month"}).click();
   await expect(page.getByText("No expenses recorded for this month.",{exact:true})).toBeVisible();
   await expect(page.getByRole("img",{name:/Expense breakdown/})).toHaveCount(0);
   await expect(page.getByRole("img",{name:/Daily income and expenses/})).not.toBeVisible();
@@ -512,7 +511,7 @@ test("chat composer fits mobile viewport and shorter keyboard viewport", async (
   }
 });
 
-test("shared month picker stages month and year before loading on both reporting pages", async ({page}, info) => {
+test("shared month picker automatically loads selections on both reporting pages", async ({page}, info) => {
   for (const path of ["/overview/", "/transactions/"]) {
     const requested:string[]=[];
     await page.route("**/api/transactions*",async route=>{
@@ -532,13 +531,14 @@ test("shared month picker stages month and year before loading on both reporting
     await expect(picker).not.toBeVisible();
     const changed=page.getByRole("button",{name:"Month: December 2027",exact:true});
     await expect(changed).toBeFocused();
-    expect(requested).toEqual(["2026-11"]);
+    await expect.poll(()=>requested).toEqual(["2026-11","2027-12"]);
+    await expect(changed).toBeEnabled();
+    await expect(page.getByRole("button",{name:"Load month",exact:true})).toHaveCount(0);
     await changed.click();
     await picker.getByRole("button",{name:"Previous year",exact:true}).click();
     await picker.getByRole("button",{name:"Cancel",exact:true}).click();
     await expect(changed).toBeVisible();
-    await page.getByRole("button",{name:"Load month",exact:true}).click();
-    await expect.poll(()=>requested.at(-1)).toBe("2027-12");
+    expect(requested).toEqual(["2026-11","2027-12"]);
     await expect(changed).toBeEnabled();
     await changed.click();
     await expect(picker.getByRole("button",{name:"December",exact:true})).toHaveAttribute("aria-pressed","true");
@@ -546,6 +546,33 @@ test("shared month picker stages month and year before loading on both reporting
     await page.screenshot({animations:"disabled",path:info.outputPath(path.includes("overview") ? "overview-month-picker.png" : "transactions-month-picker.png")});
     expect(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth)).toBe(false);
     await picker.getByRole("button",{name:"Cancel",exact:true}).click();
+    await page.unroute("**/api/transactions*");
+  }
+});
+
+test("automatic month selection retains the loaded month after a failed request and supports retry", async ({page}) => {
+  for (const path of ["/overview/","/transactions/"]) {
+    let fail = true;
+    await page.route("**/api/transactions*",async route=>{
+      const month=new URL(route.request().url()).searchParams.get("month") || "2026-11";
+      if (month==="2026-12" && fail) {
+        fail=false;
+        await route.fulfill({status:503,json:{error:"Month temporarily unavailable."}});
+        return;
+      }
+      await route.fulfill({json:{transactions:[],month,summary:{income:0,expenses:0},report:{categories:[],days:[]}}});
+    });
+    await page.goto(path);
+    const original=page.getByRole("button",{name:"Month: November 2026",exact:true});
+    await original.click();
+    await page.getByRole("button",{name:"December",exact:true}).click();
+    await expect(page.getByRole("status").filter({hasText:"Month temporarily unavailable."})).toBeVisible();
+    await expect(original).toBeEnabled();
+    await expect(page.getByRole("button",{name:"Month: December 2026",exact:true})).toHaveCount(0);
+    await original.click();
+    await page.getByRole("button",{name:"December",exact:true}).click();
+    await expect(page.getByRole("button",{name:"Month: December 2026",exact:true})).toBeEnabled();
+    await expect(page.getByRole("status").filter({hasText:"Connected to your account ledger."})).toBeVisible();
     await page.unroute("**/api/transactions*");
   }
 });

@@ -184,9 +184,10 @@ function useTrackerState() {
   function changeType(value: Entry["type"]) {
     if (draft && !uncertainSave) setDraft({ ...draft, entry: { ...draft.entry, type: value, category: value === "income" ? "other-income" : "other-expense" } });
   }
-  async function loadMonth() {
+  async function loadMonth(target: string) {
+    if (busy || !ready) return;
     setBusy(true);
-    try { await refresh(); } catch (error) { handleExpired(error); setMessage(error instanceof Error ? error.message : "Could not load this month."); }
+    try { await refresh(target); setMessage("Connected to your account ledger."); } catch (error) { handleExpired(error); setMessage(error instanceof Error ? error.message : "Could not load this month."); }
     finally { setBusy(false); }
   }
   function startSeparateEntry() {
