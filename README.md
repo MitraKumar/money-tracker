@@ -83,3 +83,11 @@ Authenticated `GET /api/reports?month=YYYY-MM` returns a consistent SQL snapshot
 Transactions now provides a desktop table/mobile list, description/type/category/date filters, sorting, matching totals, and Load more over the current month’s loaded records. Details use `/transactions/?transaction=<id>`. Edits and deletion call authenticated `/api/transactions/update` and `/api/transactions/delete`, with an expected revision and operation request ID. Conflicts preserve unsaved edits and offer an explicit reload; unknown outcomes retry the same request with inputs locked.
 
 Apply migration `0004_transaction_revisions.sql` before deploying this version (`npm run db:local` / `npm run db:remote`). It adds revision/operation fields and a deletion marker. Deletion is logical: entries disappear from lists, reports, and CSV; retained markers prevent old confirmations from recreating them. Permanent data purging/account deletion remains PRIV-01. There is no general cursor-paginated API yet; the pilot still caps accounts at 100 active records.
+
+## PWA foundation
+
+The static export includes the app manifest, ledger icons, standalone metadata, and a production-only root service worker. After an online visit, offline full-page navigation/reload shows a generic connection screen with Retry. Private data, APIs, auth, AI, CSV, and mutations are never stored by the service worker; there is no offline write queue. Unsent input remains tab memory and is lost on reload. Ordinary `next dev` does not register the worker.
+
+Test with the production export served through Wrangler. The canonical cached fallback is `/offline/` (Cloudflare redirects `/offline`); its version is in `public/sw.js` and must change when the fallback changes. Worker updates wait for old tabs to close, without forced reload. Service worker/manifest headers are configured in `public/_headers`.
+
+Run `npm run test:ui -- tests/pwa.spec.ts` against local Wrangler for real service-worker/offline checks. PWA-03 connection/install/update controls and PWA-04 real-device installation/OAuth/deployment verification remain pending. See [PWA plan](docs/pwa-plan.md).

@@ -10,8 +10,8 @@ This is the implementation tracker across sessions. The architecture documents d
 | Latest implementation commit | `0d0b499` — monthly reporting charts and CSV export |
 | Working product | Deployed account-owned POC: AI/manual confirmation, transaction details/edit/delete, monthly charts/totals and CSV |
 | Backend | Worker + D1 + capped live AI + configured Google OAuth; Google sign-in confirmed by user; full MVP schema remains open |
-| Next task | **UI-07 — onboarding/settings; finish DATA-02 API pagination separately** |
-| Active task | **None — sign-out text contrast improved and checked locally** |
+| Next task | **PWA-03 — connection/install/update experience; UI-07 and DATA-02 remain open** |
+| Active task | **None — PWA-01/02 implemented and checked locally** |
 | External setup needed later | OAuth secrets/callback configured; Google sign-in confirmed; remaining OPS-01 checks cover live cross-browser access/isolation, logout, and runtime usage |
 
 ## How to use this tracker
@@ -190,8 +190,22 @@ Append one row after each implementation session. Link the commit only if one wa
 
 | UI-04 / UI-05 + transaction APIs | Shared typed fields/inline validation for manual, AI, and saved edits; desktop table/mobile rows, collapsible filters/sort, matching totals, local Load more, query-linked details, real edit/delete, conflict reload and same-operation recovery. Migration 0004 adds revision/deletion markers; applied locally/remotely. All four unit/integration files passed, including ownership/revision/replay/deleted-provenance/report cases. Six transaction UI scenarios and six AI scenarios passed across three widths; short 320/388×400 dialog actions verified; screenshots inspected; lint/types/build/Astryx passed (existing font warnings). Deployed a8dfe5a1-50e9-4620-8608-12934b0b0dc2; live page/health return 200, anonymous detail/update/delete return 401 | UI-07 next; DATA-02 general cursor/filter API remains open. Live signed-in destructive actions not exercised against customer data. No commit/push | Not committed |
 
+| PWA planning | Inspected routes, root metadata, shared provider/shell, deployment config, architecture/UI docs, and installed Next.js guides; checked current primary PWA documentation. Added phased plan; no runtime changes or implementation checks run | PWA-01 is the first PWA task; existing UI-07/DATA-02 priorities remain. No commit/push | Not committed |
+
+| PWA-01 / PWA-02 | Added static manifest, Matcha-derived ledger PNG/maskable/Apple/favicon assets, standalone metadata, production-only registration, versioned generic offline fallback, API/mutation/cache exclusions, waiting-worker updates, and static headers. Fixed canonical fallback URL to `/offline/` after real Wrangler redirect regression. All five unit/integration files passed; 12 Chromium PWA/navigation/sign-out checks passed at desktop/mobile/compact widths; maskable icon and mobile fallback screenshot inspected. Lint (existing unused-user warning), types, production export, Astryx (existing font warnings; zero failures), deployment dry run, and whitespace check passed | PWA-03 next. Committed at user request; no deployment or push. Real-device installation/standalone OAuth and deployed headers remain PWA-04; no private offline data or background writes | This commit |
+
+## PWA extension
+
+See [PWA plan](docs/pwa-plan.md) for scope, file changes, cache policy, dependencies, and acceptance criteria. Preserve static export and the Cloudflare API architecture.
+
+- [x] **PWA-01 — Installable app identity:** manifest, branded/maskable icons, standalone metadata, exported asset checks.
+- [x] **PWA-02 — Offline fallback:** production service worker, generic fallback, explicit API cache exclusion, versioned caches and static headers. Depends on PWA-01.
+- [ ] **PWA-03 — App experience:** connectivity/startup recovery, install controls, safe update flow, standalone OAuth and mobile checks. Depends on PWA-02; coordinate settings with UI-07.
+- [ ] **PWA-04 — Verification:** production-export service-worker tests, account isolation and retry regressions, real-device installation/OAuth, deployed header/update checks. Depends on PWA-03.
+
 ## References
 
+- [PWA plan](docs/pwa-plan.md)
 - [UI plan](docs/ui-plan.md)
 - [Database architecture](docs/database-architecture.md)
 - [Chat and AI flow](docs/chat-ai-flow.md)

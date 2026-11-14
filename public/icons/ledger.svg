@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Matcha light accent and body colors; mark stays inside maskable safe area. -->
+  <path fill="#f0f0e0" d="M0 0h512v512H0z"/>
+  <rect x="142" y="116" width="228" height="280" rx="24" fill="#3e481d"/>
+  <path d="M194 116v280M228 190h94M228 246h94M228 302h56" fill="none" stroke="#f0f0e0" stroke-width="16" stroke-linecap="round"/>
+</svg>

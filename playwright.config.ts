@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: "ui.spec.ts",
+  testMatch: /(?:ui|pwa)\.spec\.ts/,
   workers: 1,
   reporter: "list",
   use: {
