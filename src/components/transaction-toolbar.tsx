@@ -75,9 +75,12 @@ export function TransactionToolbar({search,onSearch,filters,onFilters,sort,onSor
         {isMobile ? <IconButton label="Sort transactions" tooltip={sorts.find(option=>option.value===sort)?.label} icon={<Icon icon="arrowsUpDown" />} isDisabled={disabled} />
           : <Button label={sorts.find(option=>option.value===sort)!.label} aria-label="Sort transactions" icon={<Icon icon="arrowsUpDown" />} isDisabled={disabled} />}
       </Popover>
-      <Button label="Export" onClick={()=>void download()} isLoading={exporting}
-        isDisabled={!ready || !ledger || busy || exporting} variant="secondary"
+      {isMobile ? <IconButton label="Export" tooltip="Export monthly CSV" icon={<Icon icon="arrowDown" />}
+        onClick={()=>void download()} isLoading={exporting} isDisabled={!ready || !ledger || busy || exporting} variant="secondary"
         aria-description={ledger ? `Download CSV of all confirmed ${ledger.month} records in INR. Search and filters do not change the export.` : "Download monthly CSV."} />
+        : <Button label="Export" icon={<Icon icon="arrowDown" />} onClick={()=>void download()} isLoading={exporting}
+        isDisabled={!ready || !ledger || busy || exporting} variant="secondary"
+        aria-description={ledger ? `Download CSV of all confirmed ${ledger.month} records in INR. Search and filters do not change the export.` : "Download monthly CSV."} />}
     </HStack>
     {exportError && <Text role="alert">{exportError}</Text>}
     {!!chips.length && <HStack gap={2} wrap="wrap" vAlign="center" aria-label="Active filters">

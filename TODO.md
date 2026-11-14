@@ -11,7 +11,7 @@ This is the implementation tracker across sessions. The architecture documents d
 | Working product | Deployed account-owned POC: AI/manual confirmation, transaction details/edit/delete, monthly charts/totals and CSV |
 | Backend | Worker + D1 + capped live AI + configured Google OAuth; Google sign-in confirmed by user; full MVP schema remains open |
 | Next task | **UI-07 — onboarding/settings; finish DATA-02 API pagination separately** |
-| Active task | **None — red sign-out buttons implemented and checked locally** |
+| Active task | **None — Export icon implemented and checked locally** |
 | External setup needed later | OAuth secrets/callback configured; Google sign-in confirmed; remaining OPS-01 checks cover live cross-browser access/isolation, logout, and runtime usage |
 
 ## How to use this tracker
@@ -149,6 +149,7 @@ Append one row after each implementation session. Link the commit only if one wa
 
 | Task | Outcome and checks | Remaining work / next step | Commit |
 | --- | --- | --- | --- |
+| Export button icon | Added Astryx downward-arrow icon to Export. Desktop retains text; mobile uses labelled/tooltip IconButton to keep search usable at 320 width. Lint, production build/types, whitespace and Astryx checks passed (existing font warnings). Desktop transaction/export regression passed; initial compact test exposed crowded search, resolved with icon-only mobile control; both final mobile/compact transaction/export regressions passed | UI-07 / AUTH-02 next. No commit/push/deployment | Not committed |
 | Red sign-out buttons | Applied Astryx destructive variant to Settings and profile-menu Sign out buttons. Lint, production build/types, and whitespace checks passed | UI-07 / AUTH-02 next. No commit/push/deployment | Not committed |
 | Mobile chat secondary controls | Replaced mobile Add manually text with a ghost plus IconButton using accessible name/tooltip; desktop text action and existing disabled/save guards retained. Near-limit mobile count retained. Lint and production build (including types) passed; Astryx zero failures with existing font warnings. Direct Chromium checks at 390/320 verified icon-only action, form opening/input/cancel/focus return; screenshot inspected. Mobile composer fit regression passed. Older unsaved-draft/navigation scenario timed out attempting navigation behind the modal; stopped broader run | Physical keyboard QA-02 and existing obsolete UI scenario migration remain; UI-07 / AUTH-02 next. No commit/push/deployment | Not committed |
 | Mobile chat layout | Compact mobile heading and empty-state copy, remaining-height scrolling transcript, short horizontally scrolling autofill pills, compact bordered composer with near-limit count, and visual-viewport height/offset tracking. Short viewports omit footer totals while retaining navigation. Lint/types/static build passed (build requires execution outside sandbox; resolves prior TypeScript subprocess parsing failure); Astryx zero failures with existing font warnings. Six navigation/layout browser checks passed at 1440/390/320, plus final two mobile checks at normal and 480-height viewports; screenshots inspected. Next dev generated its standard AGENTS.md guidance block | Physical iOS/Android software-keyboard verification remains QA-02; UI-07 / AUTH-02 next. No commit/push/deployment | Not committed |
