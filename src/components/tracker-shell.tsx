@@ -101,7 +101,6 @@ export function TrackerShell({ children }: { children: React.ReactNode }) {
       {current === "/chat" && <MonthlyTotals />}
       <Text type="label">A little clarity, every day.</Text>
       <Text type="supporting">INR · Asia/Kolkata</Text>
-      <Text type="supporting">Signed in with Google</Text>
     </VStack>}>
       <SideNavSection title="Your money">
         {destinations.map(({href,label,icon}) => <SideNavItem key={href} label={label} icon={icon} href={href} as={Link} isSelected={current === href} />)}

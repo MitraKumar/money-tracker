@@ -83,7 +83,6 @@ export function ChatScreen() {
                 sendButton={<ChatSendButton onSend={() => {void parse();}} isDisabled={actionsDisabled||!text.trim()||text.length>500} />}
                 footerActions={<Button label="Add manually" onClick={startManual} isDisabled={actionsDisabled||entryBlocked} />}
                 status={chatError ? {type:"error",message:message} : text.length>500 ? {type:"error",message:"Keep your message within 500 characters before sending."} : undefined} />
-              <Text type="supporting">Enter sends on desktop · Shift+Enter adds a line. On mobile, tap Send.</Text>
             </VStack>
           </VStack>
         </VStack>
