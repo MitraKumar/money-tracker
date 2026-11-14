@@ -96,9 +96,13 @@ Only one clarification is active in the composer at a time. Show “Replying to:
 
 ## 3. Monthly overview
 
+Use the shared month/year picker on Overview and Transactions: a calendar trigger opens a twelve-month grid with a year field and previous/next-year controls; desktop uses a popover and mobile a bottom sheet. Choosing a month stages the YYYY-MM value; Load month refreshes records, and Cancel discards year browsing.
+
 Place the month selector at the top, followed by three summary values: Income, Expenses, and Net cash flow. Explain net cash flow as recorded income minus expenses; do not label it Balance or Savings.
 
-Below the summary, show category spending as a horizontal bar chart and spending over the month as a daily trend. Bars make category amounts easier to compare than a crowded donut. Use Recharts for charts initially, with color and typography bound to Astryx tokens; confirm the library boundary during implementation. Provide clear currency units; the daily trend has no expandable data list.
+Below the summary, show category spending as a pie chart and spending over the month as a daily trend. Use distinct theme chart colors and a matching text legend with exact category amounts and percentage shares. Use Recharts for charts initially, with color and typography bound to Astryx tokens; confirm the library boundary during implementation. Provide clear currency units; the daily trend has no expandable data list.
+
+Display entry dates in Overview and Transactions (including transaction details) as abbreviated month, two-digit day, and year, for example “Nov 07, 2026”. Stored dates, edit fields, filters, and CSV retain ISO dates.
 
 Finish with five recent transactions and a “View all” link. Month changes update summaries, charts, and recent entries consistently. A month without entries shows a helpful empty state, not a fabricated trend or percentage comparison. Drafts are never counted.
 
@@ -196,7 +200,7 @@ Modal visual refinement adds a padded body-font title and subtitle, removes dupl
 
 ### Monthly reporting implementation
 
-The existing Overview frame now uses SQL-backed expense-category bars and daily income/expense lines with solid/dashed series. Lightweight native SVG uses theme tokens; no additional chart dependency is required for these two views. Category names/amounts remain text. The daily trend retains its legend and scale; its expandable daily-data control/list was removed at user request. Missing days are zero; empty months show explicit empty states. Transactions provides a month-scoped CSV export, clearly independent of search/type filters. The displayed month remains the last successfully loaded month while edits to the month input are pending.
+The existing Overview frame now uses SQL-backed expense-category pie chart and daily income/expense lines with solid/dashed series. Lightweight native SVG uses theme tokens; no additional chart dependency is required for these two views. Category names/amounts remain text. The daily trend retains its legend and scale; its expandable daily-data control/list was removed at user request. Missing days are zero; empty months show explicit empty states. Transactions provides a month-scoped CSV export, clearly independent of search/type filters. The displayed month remains the last successfully loaded month while edits to the month input are pending.
 
 ### Transactions UI and shared fields
 

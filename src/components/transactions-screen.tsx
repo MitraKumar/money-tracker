@@ -11,7 +11,7 @@ import { List, ListItem } from "@astryxdesign/core/List";
 import { Table } from "@astryxdesign/core/Table";
 import { Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/VStack";
-import { money, type Transaction } from "@/lib/ledger";
+import { formatEntryDate, money, type Transaction } from "@/lib/ledger";
 import { label, useTracker } from "./tracker-provider";
 import { ConnectionStatus, MonthFilter, PageHeading } from "./tracker-parts";
 import { TransactionToolbar, emptyFilters, type TransactionFilters } from "./transaction-toolbar";
@@ -56,10 +56,10 @@ export function TransactionsScreen() {
     {ledger&&(filtered.length ? <>
       {isMobile ? <List edge="flush" aria-label="Transactions">{visible.map(row=><ListItem key={row.id}
         label={<Text weight="semibold" style={{overflowWrap:"anywhere"}}>{row.description}</Text>}
-        description={<VStack gap={1}><Text type="supporting">{row.date} · {label(row.category)} · {label(row.type)}</Text>
+        description={<VStack gap={1}><Text type="supporting">{formatEntryDate(row.date)} · {label(row.category)} · {label(row.type)}</Text>
           <HStack wrap="wrap" gap={2} hAlign="between" vAlign="center"><Text weight="semibold" hasTabularNumbers>{row.type==="income"?"+":"−"}{money(row.amount_minor)}</Text>{details(row)}</HStack></VStack>} />)}</List>
         : <Table<Transaction> aria-label="Transactions" data={visible} idKey="id" hasHover density="compact" columns={[
-          {key:"date",header:"Date",renderCell:row=><Text>{row.date}</Text>},
+          {key:"date",header:"Date",renderCell:row=><Text>{formatEntryDate(row.date)}</Text>},
           {key:"description",header:"Description",renderCell:row=><Text style={{overflowWrap:"anywhere"}}>{row.description}</Text>},
           {key:"category",header:"Category",renderCell:row=><Text>{label(row.category)}</Text>},
           {key:"type",header:"Type",renderCell:row=><Text>{label(row.type)}</Text>},

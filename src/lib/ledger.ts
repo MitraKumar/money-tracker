@@ -35,6 +35,12 @@ export function localDate(now = new Date()): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+export function formatEntryDate(value: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short", day: "2-digit", year: "numeric", timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
 export function money(minor: number): string {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(minor / 100);
 }

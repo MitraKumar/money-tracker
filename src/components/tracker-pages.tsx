@@ -20,9 +20,8 @@ export function OverviewScreen() {
   return <>
     <PageHeading eyebrow="THE BIGGER PICTURE" title="A month in perspective." description="A clear look at what you’ve recorded, with room to notice the little things." />
     <ConnectionStatus /><MonthFilter />
-    <Text type="supporting">{ledger ? `Confirmed records for ${ledger.month}` : "Loading…"}</Text>
+    <Text type="supporting">{ledger ? `Records for ${ledger.month}` : "Loading…"}</Text>
     <Summary />
-    <Text type="supporting">Net cash flow means recorded income minus expenses. It is not your bank balance.</Text>
     <MonthlyReportCharts />
     <VStack as="section" gap={3} aria-labelledby="recent-title">
       <HStack wrap="wrap" hAlign="between" vAlign="center" gap={3}>

@@ -7,9 +7,9 @@ import { Heading } from "@astryxdesign/core/Heading";
 import { HStack } from "@astryxdesign/core/HStack";
 import { List, ListItem } from "@astryxdesign/core/List";
 import { Text } from "@astryxdesign/core/Text";
-import { TextInput } from "@astryxdesign/core/TextInput";
+import { MonthPicker } from "./month-picker";
 import { VStack } from "@astryxdesign/core/VStack";
-import { money, type Transaction } from "@/lib/ledger";
+import { formatEntryDate, money, type Transaction } from "@/lib/ledger";
 import { label, useTracker } from "./tracker-provider";
 
 export function PageHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
@@ -33,7 +33,7 @@ export function Summary() {
 export function MonthFilter() {
   const { month, setMonth, loadMonth, busy, ready } = useTracker();
   return <HStack wrap="wrap" gap={3} vAlign="end">
-    <TextInput label="Month (YYYY-MM)" value={month} onChange={setMonth} width="14rem" isDisabled={busy || !ready} />
+    <MonthPicker value={month} onChange={setMonth} disabled={busy || !ready} />
     <Button label="Load month" onClick={() => void loadMonth()} isDisabled={busy || !ready} />
   </HStack>;
 }
@@ -44,6 +44,6 @@ export function TransactionRows({ transactions }: { transactions: Transaction[] 
   </VStack>;
   return <List edge="flush">{transactions.map((entry) => <ListItem key={entry.id}
     label={<Text weight="medium">{entry.description}</Text>}
-    description={<Text type="supporting">{entry.date} · {label(entry.category)} · {label(entry.type)}</Text>}
+    description={<Text type="supporting">{formatEntryDate(entry.date)} · {label(entry.category)} · {label(entry.type)}</Text>}
     endContent={<Text hasTabularNumbers weight="medium">{entry.type === "income" ? "+" : "−"}{money(entry.amount_minor)}</Text>} />)}</List>;
 }

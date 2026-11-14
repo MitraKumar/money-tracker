@@ -329,12 +329,19 @@ test("monthly reporting reconciles charts and month switching without export", a
   });
   await page.goto("/overview/");
   await expect(page.getByRole("img",{name:/Daily income and expenses for 2026-11/})).toBeVisible();
-  await expect(page.getByRole("region",{name:"Where it went"})).toContainText("₹25.00");
+  const categories = page.getByRole("region",{name:"Where it went"});
+  await expect(categories).toContainText("₹25.00");
+  await expect(categories.getByRole("img",{name:/Expense breakdown/})).toBeVisible();
+  await expect(categories.locator("svg[role=img] path")).toHaveCount(2);
+  await expect(categories.getByRole("list",{name:"Expense categories"})).toContainText("71.4%");
+  await expect(categories.getByRole("list",{name:"Expense categories"})).toContainText("28.6%");
   await expect(page.getByRole("button",{name:"Show daily data"})).toHaveCount(0);
   await expect(page.getByRole("button",{name:/Export/})).toHaveCount(0);
-  await page.getByRole("textbox",{name:"Month (YYYY-MM)"}).fill("2026-12");
+  await page.getByRole("button",{name:"Month: November 2026",exact:true}).click();
+  await page.getByRole("button",{name:"December",exact:true}).click();
   await page.getByRole("button",{name:"Load month"}).click();
   await expect(page.getByText("No expenses recorded for this month.",{exact:true})).toBeVisible();
+  await expect(page.getByRole("img",{name:/Expense breakdown/})).toHaveCount(0);
   await expect(page.getByRole("img",{name:/Daily income and expenses/})).not.toBeVisible();
   await expect(page.getByRole("button",{name:/Export/})).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
@@ -502,5 +509,43 @@ test("chat composer fits mobile viewport and shorter keyboard viewport", async (
     await checkFit();
     await expect(input).toHaveText("Spent ₹120 on lunch");
     await page.screenshot({path:info.outputPath("chat-short-viewport.png")});
+  }
+});
+
+test("shared month picker stages month and year before loading on both reporting pages", async ({page}, info) => {
+  for (const path of ["/overview/", "/transactions/"]) {
+    const requested:string[]=[];
+    await page.route("**/api/transactions*",async route=>{
+      const month=new URL(route.request().url()).searchParams.get("month") || "2026-11";
+      requested.push(month);
+      await route.fulfill({json:{transactions:[],month,summary:{income:0,expenses:0},report:{categories:[],days:[]}}});
+    });
+    await page.goto(path);
+    const trigger=page.getByRole("button",{name:"Month: November 2026",exact:true});
+    await expect(trigger).toBeEnabled();
+    await trigger.click();
+    const picker=page.getByRole("dialog",{name:"Choose month and year",exact:true});
+    await expect(picker).toBeVisible();
+    await expect(picker.getByRole("button",{name:"November",exact:true})).toHaveAttribute("aria-pressed","true");
+    await picker.getByRole("button",{name:"Next year",exact:true}).click();
+    await picker.getByRole("button",{name:"December",exact:true}).click();
+    await expect(picker).not.toBeVisible();
+    const changed=page.getByRole("button",{name:"Month: December 2027",exact:true});
+    await expect(changed).toBeFocused();
+    expect(requested).toEqual(["2026-11"]);
+    await changed.click();
+    await picker.getByRole("button",{name:"Previous year",exact:true}).click();
+    await picker.getByRole("button",{name:"Cancel",exact:true}).click();
+    await expect(changed).toBeVisible();
+    await page.getByRole("button",{name:"Load month",exact:true}).click();
+    await expect.poll(()=>requested.at(-1)).toBe("2027-12");
+    await expect(changed).toBeEnabled();
+    await changed.click();
+    await expect(picker.getByRole("button",{name:"December",exact:true})).toHaveAttribute("aria-pressed","true");
+    await expect(picker.getByRole("button",{name:"Cancel",exact:true})).toBeInViewport();
+    await page.screenshot({animations:"disabled",path:info.outputPath(path.includes("overview") ? "overview-month-picker.png" : "transactions-month-picker.png")});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await picker.getByRole("button",{name:"Cancel",exact:true}).click();
+    await page.unroute("**/api/transactions*");
   }
 });

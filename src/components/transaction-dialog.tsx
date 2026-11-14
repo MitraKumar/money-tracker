@@ -7,7 +7,7 @@ import { HStack } from "@astryxdesign/core/HStack";
 import { List, ListItem } from "@astryxdesign/core/List";
 import { Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/VStack";
-import { entrySchema, money, type Entry, type Transaction } from "@/lib/ledger";
+import { entrySchema, formatEntryDate, money, type Entry, type Transaction } from "@/lib/ledger";
 import { api, RequestError, label, useTracker } from "./tracker-provider";
 import { TransactionFields } from "./transaction-fields";
 
@@ -81,7 +81,7 @@ export function TransactionDialog({id,onClose}:{id:string;onClose:()=>void}) {
         ? <TransactionFields value={entry} onChange={setEntry} isDisabled={locked} showErrors={showErrors} />
         : <List edge="flush">
           <ListItem label={row.description} description={`${label(row.type)} · ${label(row.category)}`} endContent={<Text weight="semibold" hasTabularNumbers>{row.type==="income"?"+":"−"}{money(row.amount_minor)}</Text>} />
-          <ListItem label="Date" endContent={<Text>{row.date}</Text>} />
+          <ListItem label="Date" endContent={<Text>{formatEntryDate(row.date)}</Text>} />
         </List>)}
       {mode==="delete"&&<Text>Delete this entry from your ledger and monthly reports? Its financial values will no longer appear in totals or CSV exports.</Text>}
     </VStack>
