@@ -7,10 +7,10 @@ This is the implementation tracker across sessions. The architecture documents d
 | Item | Status |
 | --- | --- |
 | Foundation | Next.js + TypeScript + Astryx Matcha starter implemented |
-| Latest implementation commit | `a6acd5a` — app setup; pushed to `origin/main` |
+| Latest implementation commit | `4e3da26` — POC and AI fixes; UI-01 changes are not committed yet |
 | Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
 | Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
-| Next task | **UI-01: Application shell and routes** |
+| Next task | **UI-02: Chat composition and history** |
 | Active task | None |
 | External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
 
@@ -43,7 +43,7 @@ The proof is a deliberately smaller implementation. The API/database/UI tasks be
 
 Build realistic UI states before connecting the backend. Keep fixture data clearly separated from live data; no pretend successful saves.
 
-- [ ] **UI-01 — Application shell and routes** · Depends on SETUP-02. Add `/login`, `/setup`, `/chat`, `/overview`, `/transactions`, `/settings`, shared desktop navigation, mobile bottom navigation, and profile menu. Done when each route survives direct navigation in the static export, current navigation is identified accessibly, and layouts work on mobile/desktop. Keep arbitrary record/thread IDs in query parameters.
+- [x] **UI-01 — Application shell and routes** · Depends on SETUP-02. Add `/login`, `/setup`, `/chat`, `/overview`, `/transactions`, `/settings`, shared desktop navigation, mobile bottom navigation, and profile menu. Done when each route survives direct navigation in the static export, current navigation is identified accessibly, and layouts work on mobile/desktop. Keep arbitrary record/thread IDs in query parameters.
 - [ ] **UI-02 — Chat composition and history** · Depends on UI-01. Add Astryx chat layout, date-grouped messages, timestamps, example prompts that fill without sending, composer, and manual-entry access. Done when keyboard/IME behavior is correct, input survives simulated errors, and the mobile keyboard does not cover controls. Use fixture responses only at this stage.
 - [ ] **UI-03 — Transaction preview and clarification** · Depends on UI-02. Build draft states, editable amount/type/category/date/description, one active clarification context, cancel, saving, saved receipt, and unknown-save status. Done when fixture interactions show every state accurately, category edits require no AI call, and nothing appears saved before a simulated acknowledgment.
 - [ ] **UI-04 — Manual transaction form** · Depends on UI-01. Build reusable amount, direction, category, date, and description inputs. Done when errors are inline, values are retained on failure, and the same form can support draft and saved-record editing. Define a typed submit boundary for later API integration.
@@ -95,9 +95,10 @@ Append one row after each implementation session. Link the commit only if one wa
 | Task | Outcome and checks | Remaining work / next step | Commit |
 | --- | --- | --- | --- |
 | SETUP-01–04 | Planning and frontend scaffold completed; starter build/lint/types/Astryx/browser checks passed | Start UI-01; all application/backend features remain open | `4b17397`, `a6acd5a` |
-| POC-01 | Dedicated Cloudflare deployment; local/remote D1 isolation/concurrency/totals and live AI extraction/confirmation verified; responsive local browser checks passed | UI-01 next; full MVP tasks and production CPU/cost/retention verification remain open; see deployment record | Not committed |
+| POC-01 | Dedicated Cloudflare deployment; local/remote D1 isolation/concurrency/totals and live AI extraction/confirmation verified; responsive local browser checks passed | UI-01 next; full MVP tasks and production CPU/cost/retention verification remain open; see deployment record | `4e3da26` |
+| POC-02 | Salary null-description regression and unchanged-text failure retry fixed; unit/type/lint/build/Astryx checks passed; live salary twice then expense and browser retry verified | Deployed version `05fed95b-f94b-4d5f-9f95-fd14ee998f51`; continue UI-01 | `4e3da26` |
 
-| POC-02 | Salary null-description regression and unchanged-text failure retry fixed; unit/type/lint/build/Astryx checks passed; live salary twice then expense and browser retry verified | Deployed version `05fed95b-f94b-4d5f-9f95-fd14ee998f51`; continue UI-01 | Not committed |
+| UI-01 | Static routes and shared Astryx shell, desktop/sidebar and mobile navigation, profile dialog, route-preserved draft state, real summary/transaction views, search/type filters; unit/lint/type/build/Astryx/local API checks passed; 6 browser scenarios across 1440/390/320 widths passed locally and on the live deployment | Continue UI-02; deployed version `653d5712-cb5f-4b3d-8a51-c96ee07dc392`; full transcript, charts, full record actions, and Google account support remain incomplete | Not committed |
 
 ## References
 

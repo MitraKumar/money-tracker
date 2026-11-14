@@ -109,3 +109,12 @@ Deployed version `05fed95b-f94b-4d5f-9f95-fd14ee998f51` fixes two issues found w
 Diagnostics distinguish timeout, provider failure, and invalid output. Live diagnostic events contain stage, duration, issue paths/codes, and draft ID; they exclude chat text, model response, and exception messages. Persistent observability remains disabled.
 
 Regression verification: exact salary input succeeded twice consecutively, followed by a lunch expense in the same session. A browser test simulated unavailable followed by success and verified distinct request IDs and a rendered draft. Added unit cases cover null/blank descriptions, missing categories, missing amount/type/date, invalid dates, and mismatched categories. Lint, types, static build, and Astryx built-output checks passed.
+
+
+## UI-01 application shell
+
+Deployed version `653d5712-cb5f-4b3d-8a51-c96ee07dc392` adds six static routes: `/chat/`, `/overview/`, `/transactions/`, `/settings/`, `/login/`, and `/setup/`. `/` remains a Chat alias. The shared Astryx shell provides desktop/sidebar navigation, mobile bottom navigation, current-page announcements, a profile dialog, and safe-area-aware footer spacing. The mobile Entries control opens Transactions and is named “Entries (Transactions)” accessibly.
+
+The existing POC controller was moved to a shared provider so navigating between pages preserves unsaved input/drafts and save retry keys. Overview and Transactions show actual saved POC data; transaction description search and type filtering run over the selected month's records. Login/setup explain the existing anonymous browser session and fixed currency/timezone without pretending Google sign-in is connected.
+
+Verified six Playwright scenarios on both local and deployed builds at 1440, 390, and 320 CSS pixels: direct-route responses, profile links, current navigation, no truncated navigation labels/sideways overflow, draft persistence across routes, manual save, description filtering, reload persistence, and cross-page totals. Final local narrow-screen rerun was interrupted by the local preview stopping; the complete final suite passed against the deployed app. Unit checks, lint, types, static build, and Astryx diagnostics also passed. No database migration or Worker API changes were needed for UI-01.

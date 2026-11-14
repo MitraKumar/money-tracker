@@ -161,4 +161,8 @@ Implementation order:
 4. **API integration:** connect actual states, idempotent save resolution, authenticated loading, and cross-page updates.
 5. **Validation:** keyboard and screen-reader smoke checks, mobile keyboard/composer behavior, contrast/zoom, slow/offline states, and bundle/build review.
 
-This plan does not install packages or implement screens. The next concrete design deliverable is a rendered Chat screen with the Matcha theme and realistic transaction states.
+UI-01 is implemented: the shell is adapted from Astryx’s `shell-side-nav` template with a top header, shared sidebar, Layout content/footer, and mobile bottom navigation. All six static routes exist. The mobile Entries label links to Transactions and retains its full accessible name. The profile control uses an accessible Popover containing navigation links.
+
+The POC entry logic now lives in a shared provider, keeping input, draft, uncertain-save key, and selected ledger month through in-app route changes. Overview and Transactions use existing real POC data; search and type filtering are scoped to the loaded month. Login/setup accurately explain the browser demo and fixed preferences. Existing POC account/data limitations remain.
+
+Full chat transcript/composer behavior, complete draft lifecycle, charts, saved-record actions, and actual authentication/onboarding remain tracked separately. UI-01 does not mark those tasks complete. Next: UI-02 chat composition and history.

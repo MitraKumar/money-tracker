@@ -33,6 +33,25 @@ The static build is written to `out/`. `next start` does not serve static export
 
 The type-check command generates Next.js route declarations first, so it works on a fresh checkout before a production build.
 
+## UI routes and browser checks
+
+The shared application shell now provides `/chat/`, `/overview/`, `/transactions/`, `/settings/`, `/login/`, and `/setup/`. `/` remains a Chat alias. Desktop uses a sidebar; mobile uses bottom navigation (Entries opens Transactions). Profile opens settings and account options. Shared client state preserves unsaved entry text and draft details during in-app navigation; a full page reload still discards unsaved client state.
+
+Overview and Transactions use the existing POC API and saved D1 records. Login/setup are honest browser-demo entry screens, not Google authentication or persisted preference forms. Saved-record editing/deletion, exports, charts, and durable chat history remain future work.
+
+To rerun the responsive browser suite:
+
+```sh
+npx playwright install chromium
+npm run db:local
+npm run build
+npm run dev:worker -- --var AI_ENABLED:false
+# In another terminal:
+npm run test:ui
+```
+
+The browser tests use the local Worker at `http://127.0.0.1:8787`, create synthetic records, and do not invoke AI. They check direct-route loads, accessible current navigation, the profile dialog, draft preservation across routes, saving/search/filtering, persistence after reload, and narrow layouts. `PLAYWRIGHT_BASE_URL` can select another test deployment. An existing browser can be selected with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
+
 ## Theme
 
 - `src/components/app-theme.tsx` provides the app-wide light Matcha theme.

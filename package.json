@@ -14,7 +14,8 @@
     "db:local": "wrangler d1 migrations apply money-tracker-poc --local",
     "db:remote": "wrangler d1 migrations apply money-tracker-poc --remote",
     "deploy": "npm run build && wrangler deploy",
-    "deploy:dry": "wrangler deploy --dry-run"
+    "deploy:dry": "wrangler deploy --dry-run",
+    "test:ui": "playwright test"
   },
   "dependencies": {
     "@astryxdesign/core": "0.7.16",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@astryxdesign/cli": "0.7.16",
     "@cloudflare/workers-types": "5.20261114.1",
+    "@playwright/test": "1.65.1",
     "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
