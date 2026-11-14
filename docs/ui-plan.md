@@ -191,3 +191,7 @@ Add manually opens an Astryx form Dialog containing the existing transaction fie
 Manual modal follow-up: the backdrop dismisses the idle form, while pending/uncertain saves remain protected. The header and action footer stay outside the independently scrolling field area so Confirm and Cancel remain visible on short/mobile viewports.
 
 Modal visual refinement adds a padded body-font title and subtitle, removes duplicate introductory status copy, pairs Type/Amount and Category/Date on wide screens, and stacks fields on mobile. Footer actions align at the end with Cancel secondary to Confirm.
+
+### Monthly reporting implementation
+
+The existing Overview frame now uses SQL-backed expense-category bars and daily income/expense lines with solid/dashed series. Lightweight native SVG uses theme tokens; no additional chart dependency is required for these two views. Category names/amounts remain text, and Show daily data exposes every calendar day with income, expenses, and net cash flow. Missing days are zero; empty months show explicit empty states. Overview and Transactions provide a month-scoped CSV export, clearly independent of search/type filters. The displayed month remains the last successfully loaded month while edits to the month input are pending.

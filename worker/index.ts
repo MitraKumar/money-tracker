@@ -2,6 +2,8 @@ import { authConfigured, createAuth, type AuthEnv } from "./auth";
 import { z } from "zod";
 import { entrySchema, localDate, modelResultSchema, organizeModelResult, requestIdSchema, toMinorUnits } from "../src/lib/ledger";
 
+import { transactionCsv } from "../src/lib/reporting";
+
 interface Env extends AuthEnv {
   DB: D1Database;
   AI: Ai;
@@ -68,14 +70,27 @@ async function api(request: Request, env: Env) {
   const owner = session?.response?.user.id;
   if (!owner) throw new ApiError(401, "Sign in with Google to access your ledger.");
 
-  if (url.pathname === "/api/transactions" && request.method === "GET") {
+  if (["/api/transactions", "/api/reports", "/api/export"].includes(url.pathname) && request.method === "GET") {
     const month = url.searchParams.get("month") ?? localDate().slice(0, 7);
     if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month)) throw new ApiError(400, "Invalid month.");
-    const { results } = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? ORDER BY date DESC, created_at DESC, id DESC LIMIT 100")
-      .bind(owner, `${month}-01`, `${month}-32`).all<TransactionRow>();
-    const summary = await env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END),0) income, COALESCE(SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END),0) expenses FROM ledger_transactions WHERE user_id=? AND date>=? AND date<?")
-      .bind(owner, `${month}-01`, `${month}-32`).first();
-    return json({ transactions: results.map(record), summary, month });
+    const bounds = [owner, `${month}-01`, `${month}-32`];
+    if (url.pathname === "/api/export") {
+      const { results } = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? ORDER BY date,created_at,id").bind(...bounds).all<TransactionRow>();
+      return new Response(transactionCsv(results.map(record)), {headers:{
+        "Content-Type":"text/csv; charset=utf-8",
+        "Content-Disposition":`attachment; filename="money-tracker-${month}.csv"`,
+        "Cache-Control":"no-store", "X-Content-Type-Options":"nosniff",
+      }});
+    }
+    // D1 batches execute in one transaction so every report shares a snapshot.
+    const [rows, totals, categories, days] = await env.DB.batch([
+      env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? ORDER BY date DESC,created_at DESC,id DESC LIMIT 100").bind(...bounds),
+      env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END),0) income, COALESCE(SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END),0) expenses FROM ledger_transactions WHERE user_id=? AND date>=? AND date<?").bind(...bounds),
+      env.DB.prepare("SELECT category,SUM(amount_minor) amount_minor FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? AND type='expense' GROUP BY category ORDER BY amount_minor DESC,category").bind(...bounds),
+      env.DB.prepare("SELECT date, SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END) income, SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END) expenses FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? GROUP BY date ORDER BY date").bind(...bounds),
+    ]);
+    return json({ transactions: rows.results.map(row => record(row as unknown as TransactionRow)), summary:totals.results[0], month,
+      report:{categories:categories.results,days:days.results} });
   }
 
   if (url.pathname === "/api/parse" && request.method === "POST") {

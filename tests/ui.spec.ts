@@ -317,3 +317,34 @@ test("live AI unavailable retry retains text and uses a fresh completed operatio
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(page.getByRole("button",{name:"Add manually",exact:true})).toBeEnabled();
 });
+
+test("monthly reporting reconciles charts, daily data, month switching, and CSV scope", async ({page}) => {
+  const requested: string[]=[];
+  await page.route("**/api/transactions*",async route => {
+    const month=new URL(route.request().url()).searchParams.get("month")??"2026-11";
+    const empty=month==="2026-12";
+    await route.fulfill({json:{transactions:[],month,summary:empty?{income:0,expenses:0}:{income:20000,expenses:3500},report:empty?{categories:[],days:[]}:{
+      categories:[{category:"dining",amount_minor:2500},{category:"transport",amount_minor:1000}],
+      days:[{date:"2026-11-01",income:20000,expenses:2500},{date:"2026-11-15",income:0,expenses:1000}],
+    }}});
+  });
+  await page.route("**/api/export*",async route => {
+    requested.push(new URL(route.request().url()).searchParams.get("month")!);
+    await route.fulfill({contentType:"text/csv",body:"date,type,category,description,currency,amount\r\n"});
+  });
+  await page.goto("/overview/");
+  await expect(page.getByRole("img",{name:/Daily income and expenses for 2026-11/})).toBeVisible();
+  await expect(page.getByRole("region",{name:"Where it went"})).toContainText("₹25.00");
+  await page.getByRole("button",{name:"Show daily data"}).click();
+  await expect(page.getByRole("list",{name:"Daily report data"})).toContainText("Income ₹200.00");
+  const download=page.waitForEvent("download");
+  await page.getByRole("button",{name:"Export 2026-11 CSV"}).click();
+  expect((await download).suggestedFilename()).toBe("money-tracker-2026-11.csv");
+  expect(requested).toEqual(["2026-11"]);
+  await page.getByRole("textbox",{name:"Month (YYYY-MM)"}).fill("2026-12");
+  await page.getByRole("button",{name:"Load month"}).click();
+  await expect(page.getByText("No expenses recorded for this month.",{exact:true})).toBeVisible();
+  await expect(page.getByRole("img",{name:/Daily income and expenses/})).not.toBeVisible();
+  await expect(page.getByRole("button",{name:"Export 2026-12 CSV"})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+});

@@ -10,27 +10,23 @@ import { Selector } from "@astryxdesign/core/Selector";
 import { Text } from "@astryxdesign/core/Text";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { VStack } from "@astryxdesign/core/VStack";
-import { money } from "@/lib/ledger";
-import { label, useTracker } from "./tracker-provider";
+import { useTracker } from "./tracker-provider";
 import { ConnectionStatus, MonthFilter, PageHeading, Summary, TransactionRows } from "./tracker-parts";
+
+import { MonthlyReportCharts, MonthlyExport } from "./monthly-report";
 
 const bodyHeading = { fontFamily: "var(--font-family-body)" };
 
 export function OverviewScreen() {
   const {ledger}=useTracker();
-  const breakdown = new Map<string,number>();
-  for(const entry of ledger?.transactions ?? []) if(entry.type==="expense") breakdown.set(entry.category,(breakdown.get(entry.category)??0)+entry.amount_minor);
   return <>
     <PageHeading eyebrow="THE BIGGER PICTURE" title="A month in perspective." description="A clear look at what you’ve recorded, with room to notice the little things." />
     <ConnectionStatus /><MonthFilter />
     <Text type="supporting">{ledger ? `Confirmed records for ${ledger.month}` : "Loading…"}</Text>
     <Summary />
     <Text type="supporting">Net cash flow means recorded income minus expenses. It is not your bank balance.</Text>
-    <VStack as="section" gap={4} aria-labelledby="category-title">
-      <Heading level={2} id="category-title" style={bodyHeading}>Where it went</Heading>
-      {breakdown.size ? <List edge="flush">{[...breakdown.entries()].sort((a,b)=>b[1]-a[1]).map(([category,total])=><ListItem key={category} label={label(category)} endContent={<Text hasTabularNumbers>{money(total)}</Text>} />)}</List>
-        : <Text as="p" color="secondary">Your category breakdown will appear after you save an expense.</Text>}
-    </VStack>
+    <MonthlyReportCharts />
+    <MonthlyExport />
     <VStack as="section" gap={3} aria-labelledby="recent-title">
       <HStack wrap="wrap" hAlign="between" vAlign="center" gap={3}>
         <Heading level={2} id="recent-title" style={bodyHeading}>Recent entries</Heading>
@@ -57,7 +53,8 @@ export function TransactionsScreen() {
     {ledger && (ledger.transactions.length && !transactions.length
       ? <VStack gap={3}><Text>No matches in this month.</Text><Button label="Clear filters" onClick={()=>{setSearch("");setType("all");}} variant="ghost" /></VStack>
       : <TransactionRows transactions={transactions} />)}
-    <Text type="supporting">Search covers this month’s saved entries. The current pilot supports up to 100 records per account. Editing and exports will follow.</Text>
+    <MonthlyExport />
+    <Text type="supporting">Search covers this month’s saved entries. The current pilot supports up to 100 records per account. Editing will follow.</Text>
   </>;
 }
 
@@ -73,7 +70,7 @@ export function SettingsScreen() {
     </List>
     <VStack gap={3}>
       <Heading level={2} style={bodyHeading}>Before you add anything</Heading>
-      <Text as="p" color="secondary">Keep your Google account secure. Exports and account-deletion controls are still being developed; this remains an early pilot.</Text>
+      <Text as="p" color="secondary">Keep your Google account secure. Monthly CSV exports are available in Overview. Account-deletion controls are still being developed; this remains an early pilot.</Text>
       <HStack wrap="wrap" gap={3}><Button label="Sign out" onClick={()=>void signOut()} isDisabled={busy} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
     </VStack>
   </>;

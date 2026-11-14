@@ -7,7 +7,9 @@ import { previewReducer, isActivePreview, isLockedPreview, type PreviewScenario 
 
 export type ChatLine = { id: string; sender: "user" | "assistant"; text: string; at: string; previewId?: string };
 
-type Ledger = { transactions: Transaction[]; summary: { income: number; expenses: number }; month: string };
+import { type MonthlyReport } from "@/lib/reporting";
+
+type Ledger = { report?: MonthlyReport; transactions: Transaction[]; summary: { income: number; expenses: number }; month: string };
 type Draft = { entry: Entry; draftId: string | null };
 export type AppUser = { id: string; name: string; email: string; image?: string | null };
 type Save = { entry: Entry; draftId: string | null; requestId: string };

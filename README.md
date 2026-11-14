@@ -52,7 +52,7 @@ UI tests mock the account/API boundary, covering responsive routes, drafts, filt
 - Ledger records reference user IDs rather than browser sessions. Sessions can expire/sign out without deleting saved transactions.
 - Anonymous cookies and session creation are rejected. The UI hides private views until a validated account session is available; each API independently checks ownership.
 - Existing browser-demo tables remain for their original expiration cleanup. New account tables are additive migrations, not destructive replacements.
-- INR and Asia/Kolkata remain the current fixed ledger defaults. Full onboarding, exports, deletion controls, charts, and durable chat history are backlog items.
+- INR and Asia/Kolkata remain the current fixed ledger defaults. Monthly category/day reports, charts, and account-scoped CSV exports are implemented. Full onboarding, deletion controls, and durable chat history remain backlog items.
 
 ## Theme and routes
 
@@ -71,3 +71,9 @@ Historical deployment details: [POC deployment](docs/poc-deployment.md). Design 
 The installation audit reports seven moderate development-tooling findings through TypeScript ESLint's transitive minimatch dependency. Compatible audit updates did not resolve them; no forced major override was applied. Astryx diagnostics also flag external font loading for manual review. Current auth overhead and quotas still require measurement before promising free production capacity.
 
 Chat Send is connected to the authenticated Worker AI parser. Successful suggestions open the review dialog and require explicit confirmation before saving. Chat history remains in tab memory; clarification currently requires resending the complete entry. The existing POC limits apply (10 parses per account and 50 app-wide per UTC day); manual entry remains available during AI failures or quota exhaustion.
+
+## Monthly reporting
+
+Overview shows confirmed income, expenses, net cash flow, category bars, daily income/expense lines, and expandable exact daily values. Change the month and select Load month. Empty months show empty states rather than invented activity.
+
+Authenticated `GET /api/reports?month=YYYY-MM` returns a consistent SQL snapshot of monthly totals, category expenses, daily totals, and recent records. The existing transactions response includes the same report data. `GET /api/export?month=YYYY-MM` downloads all confirmed entries for that account/month as INR CSV, independent of client search filters and the 100-row display limit. CSV fields are quoted and formula-like text is neutralized for spreadsheet opening. No new database migration is required.

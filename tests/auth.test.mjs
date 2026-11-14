@@ -106,3 +106,43 @@ test('password signup and signin are disabled: Google is the only identity provi
  }
  assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM "user"').get().n,0);
 });
+
+test('monthly reports and CSV reconcile beyond list limit and isolate users/months',async()=>{
+ const {call,createUser,createSession,db}=await setup();createUser('alice');createUser('bob');
+ const a=createSession('alice'),b=createSession('bob');
+ function insert(user,entry){
+  const id=randomUUID();
+  const minor=Math.round(Number(entry.amount)*100);
+  db.sqlite.prepare('INSERT INTO ledger_transactions(id,user_id,request_id,source_parse_id,type,amount_minor,date,category,description,payload,created_at) VALUES(?,?,?,NULL,?,?,?,?,?,?,?)')
+   .run(id,user,randomUUID(),entry.type,minor,entry.date,entry.category,entry.description,JSON.stringify(entry),Date.now());
+ }
+ const expense={type:'expense',amount:'1.00',date:'2026-11-15',category:'dining',description:'Lunch'};
+ for(let i=0;i<101;i++)insert('alice',expense);
+ insert('alice',{...expense,amount:'2.50',date:'2026-11-01',category:'transport',description:'=1+1'});
+ insert('alice',{type:'income',amount:'1000',date:'2026-11-01',category:'salary',description:'Salary'});
+ insert('alice',{...expense,date:'2026-10-31',amount:'55'});
+ insert('bob',{...expense,amount:'999'});
+ db.sqlite.prepare('INSERT INTO ledger_parses(id,user_id,request_id,day,input,result,created_at) VALUES(?,?,?,?,?,?,?)')
+  .run(randomUUID(),'alice',randomUUID(),'2026-11-15','Unconfirmed',JSON.stringify({status:'candidate',entry:expense}),Date.now());
+ const report=await(await call('/api/reports?month=2026-11',{cookie:a.cookie})).json();
+ assert.equal(report.transactions.length,100);
+ assert.deepEqual(report.summary,{income:100000,expenses:10350});
+ assert.equal(report.report.categories.reduce((n,r)=>n+r.amount_minor,0),10350);
+ assert.equal(report.report.days.reduce((n,r)=>n+r.income,0),100000);
+ assert.equal(report.report.days.reduce((n,r)=>n+r.expenses,0),10350);
+ const exported=await call('/api/export?month=2026-11',{cookie:a.cookie});
+ assert.equal(exported.headers.get('content-type'),'text/csv; charset=utf-8');
+ const csv=await exported.text();
+ assert.equal(csv.trim().split('\r\n').length,104); // header + 103 confirmed entries
+ assert.ok(csv.includes('"\'=1+1"'));
+ assert.equal(csv.includes('"999.00"'),false);
+ assert.equal(csv.includes('2026-10-31'),false);
+ const other=await(await call('/api/reports?month=2026-11',{cookie:b.cookie})).json();
+ assert.equal(other.summary.expenses,99900);
+ const empty=await(await call('/api/reports?month=2026-12',{cookie:a.cookie})).json();
+ assert.deepEqual(empty.summary,{income:0,expenses:0});assert.deepEqual(empty.report,{categories:[],days:[]});
+ assert.equal((await call('/api/reports?month=2026-13',{cookie:a.cookie})).status,400);
+ assert.equal((await call('/api/export?month=bad',{cookie:a.cookie})).status,400);
+ assert.equal((await call('/api/reports')).status,401);
+ assert.equal((await call('/api/export')).status,401);
+});
