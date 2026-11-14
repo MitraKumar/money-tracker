@@ -27,7 +27,7 @@ export const entrySchema = z.object({
   : !["salary", "other-income"].includes(entry.category), "Choose a category matching income or expense.");
 
 export type Entry = z.infer<typeof entrySchema>;
-export type Transaction = Entry & { id: string; amount_minor: number; created_at: number };
+export type Transaction = Entry & { id: string; amount_minor: number; created_at: number; revision: number };
 
 export function localDate(now = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);

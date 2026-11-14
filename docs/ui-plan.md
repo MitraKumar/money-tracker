@@ -195,3 +195,7 @@ Modal visual refinement adds a padded body-font title and subtitle, removes dupl
 ### Monthly reporting implementation
 
 The existing Overview frame now uses SQL-backed expense-category bars and daily income/expense lines with solid/dashed series. Lightweight native SVG uses theme tokens; no additional chart dependency is required for these two views. Category names/amounts remain text, and Show daily data exposes every calendar day with income, expenses, and net cash flow. Missing days are zero; empty months show explicit empty states. Overview and Transactions provide a month-scoped CSV export, clearly independent of search/type filters. The displayed month remains the last successfully loaded month while edits to the month input are pending.
+
+### Transactions UI and shared fields
+
+Transactions uses the existing page frame with a dense desktop Table and mobile List. Description/type/category/date filters and sorting run against the loaded month; matching totals and 20-row Load more batches are explicit about their scope. Query-parameter detail dialogs fetch the latest account-owned record. The same TransactionFields component supplies inline validation for manual entry, AI suggestions, and saved-record editing. Edit/Delete use revision-checked APIs; conflicts retain values until an explicit reload, and unknown outcomes lock inputs/dismissal while offering retry of the same request. Delete requires a separate confirmation and refreshes monthly reports only after server acknowledgment.

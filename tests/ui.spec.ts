@@ -348,3 +348,106 @@ test("monthly reporting reconciles charts, daily data, month switching, and CSV 
   await expect(page.getByRole("button",{name:"Export 2026-12 CSV"})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
 });
+
+test("transactions UI filters, loads rows, edits with validation, and confirms deletion", async ({page},info) => {
+  let rows=Array.from({length:25},(_,i)=>({
+    id:`00000000-0000-4000-8000-${String(i).padStart(12,"0")}`,
+    type:"expense",amount:"12.50",amount_minor:1250,category:"dining",date:"2026-11-15",
+    description:`Lunch ${String(i).padStart(2,"0")}`,created_at:25-i,revision:1,
+  }));
+  let writes=0,deletes=0;
+  await page.route("**/api/transactions**",async route=>{
+    const url=new URL(route.request().url());
+    if(url.pathname.endsWith("/detail")){
+      const row=rows.find(row=>row.id===url.searchParams.get("id"));
+      await route.fulfill({status:row?200:404,json:row?{transaction:row}:{error:"Not found"}});return;
+    }
+    if(url.pathname.endsWith("/update")){
+      const input=route.request().postDataJSON();writes++;
+      rows=rows.map(row=>row.id===input.id?{...row,...input.entry,revision:row.revision+1,amount_minor:Math.round(Number(input.entry.amount)*100)}:row);
+      await route.fulfill({json:{transaction:rows.find(row=>row.id===input.id)}});return;
+    }
+    if(url.pathname.endsWith("/delete")){
+      deletes++;rows=rows.filter(row=>row.id!==route.request().postDataJSON().id);
+      await route.fulfill({json:{deleted:true}});return;
+    }
+    await route.fulfill({json:{transactions:rows,month:"2026-11",summary:{income:0,expenses:rows.reduce((n,row)=>n+row.amount_minor,0)}}});
+  });
+  await page.goto("/transactions/");
+  await expect(page.getByRole(page.viewportSize()!.width<768?"list":"table",{name:"Transactions",exact:true})).toBeVisible();
+  await expect(page.getByText("Showing 20 of 25 matches")).toBeVisible();
+  await page.screenshot({path:info.outputPath("transactions-list.png")});
+  await page.getByRole("button",{name:"Load more entries"}).click();
+  await expect(page.getByText("Showing 25 of 25 matches")).toBeVisible();
+  await page.getByRole("searchbox",{name:"Search descriptions"}).fill("no such entry");
+  await expect(page.getByText("No matches in this month.",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Clear filters"}).click();
+  await page.getByRole("button",{name:"Filters and sort",exact:true}).click();
+  await choose(page,"Category","Transport");
+  await expect(page.getByText("No matches in this month.",{exact:true})).toBeVisible();
+  await choose(page,"Category","Dining");
+  await choose(page,"Sort entries","Oldest first");
+  await choose(page,"Sort entries","Newest first");
+  await page.getByRole("button",{name:"View transaction: Lunch 00",exact:true}).click();
+  const dialog=page.getByRole("dialog",{name:"Transaction details",exact:true});
+  await expect(dialog).toContainText("Lunch 00");
+  await expect(page).toHaveURL(/transaction=/);
+  await dialog.getByRole("button",{name:"Edit transaction",exact:true}).click();
+  const edit=page.getByRole("dialog",{name:"Edit transaction",exact:true});
+  await edit.getByRole("textbox",{name:"Amount (INR)"}).fill("-1");
+  await edit.getByRole("button",{name:"Save changes",exact:true}).click();
+  expect(writes).toBe(0);
+  await expect(edit.getByText("Check the highlighted fields.")).toBeVisible();
+  await edit.getByRole("textbox",{name:"Amount (INR)"}).fill("15.75");
+  await edit.getByRole("textbox",{name:"Description",exact:true}).fill("Updated lunch");
+  await edit.getByRole("button",{name:"Save changes",exact:true}).click();
+  await expect(edit).not.toBeVisible();
+  expect(writes).toBe(1);
+  await page.getByRole("button",{name:"View transaction: Updated lunch",exact:true}).click();
+  await page.getByRole("dialog").getByRole("button",{name:"Delete transaction",exact:true}).click();
+  await page.getByRole("dialog",{name:"Delete transaction?",exact:true}).getByRole("button",{name:"Cancel",exact:true}).click();
+  expect(deletes).toBe(0);
+  await page.getByRole("dialog").getByRole("button",{name:"Delete transaction",exact:true}).click();
+  await page.getByRole("dialog",{name:"Delete transaction?",exact:true}).getByRole("button",{name:"Confirm deletion",exact:true}).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  expect(deletes).toBe(1);
+  await expect(page.getByRole("button",{name:"View transaction: Updated lunch",exact:true})).not.toBeVisible();
+  await page.getByRole("textbox",{name:"From date (YYYY-MM-DD)"}).fill("2026-11-20");
+  await page.getByRole("textbox",{name:"To date (YYYY-MM-DD)"}).fill("2026-11-01");
+  await expect(page.getByRole("alert").filter({hasText:"end date"})).toBeVisible();
+  await page.getByRole("button",{name:"Clear filters"}).click();
+  await page.getByRole("button",{name:"View transaction: Lunch 01",exact:true}).click();
+  await page.waitForTimeout(250);
+  await page.screenshot({path:info.outputPath("transaction-details.png")});
+  await page.getByRole("dialog").getByRole("button",{name:"Close",exact:true}).last().click();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+});
+
+test("transactions UI retains conflicted edits and safely retries unknown updates",async({page})=>{
+  const id="00000000-0000-4000-8000-000000000001";
+  const row={id,type:"expense",amount:"10",amount_minor:1000,category:"dining",date:"2026-11-15",description:"Lunch",created_at:1,revision:1};
+  const keys:string[]=[];let attempt=0,details=0;
+  await page.route("**/api/transactions**",async route=>{
+    const path=new URL(route.request().url()).pathname;
+    if(path.endsWith("/detail")){details++;await route.fulfill({json:{transaction:{...row,revision:details}}});return;}
+    if(path.endsWith("/update")){
+      const input=route.request().postDataJSON();keys.push(input.requestId);attempt++;
+      if(attempt===1){await route.fulfill({status:409,json:{error:"Transaction changed elsewhere."}});return;}
+      if(attempt===2){await route.abort();return;}
+      await route.fulfill({json:{transaction:{...row,...input.entry,revision:3}}});return;
+    }
+    await route.fulfill({json:{transactions:[row],month:"2026-11",summary:{income:0,expenses:1000}}});
+  });
+  await page.goto("/transactions/?transaction="+id);
+  await page.getByRole("dialog").getByRole("button",{name:"Edit transaction",exact:true}).click();
+  await page.getByRole("dialog").getByRole("textbox",{name:"Description",exact:true}).fill("Keep these edits");
+  await page.getByRole("dialog").getByRole("button",{name:"Save changes",exact:true}).click();
+  await expect(page.getByRole("dialog").getByRole("textbox",{name:"Description",exact:true})).toHaveValue("Keep these edits");
+  await page.getByRole("button",{name:"Reload saved version",exact:true}).click();
+  await page.getByRole("dialog").getByRole("button",{name:"Edit transaction",exact:true}).click();
+  await page.getByRole("dialog").getByRole("button",{name:"Save changes",exact:true}).click();
+  await expect(page.getByRole("alertdialog").getByRole("textbox",{name:"Description",exact:true})).toBeDisabled();
+  await page.getByRole("button",{name:"Retry same operation",exact:true}).click();
+  await expect(page.getByRole("alertdialog")).not.toBeVisible();
+  expect(keys.length).toBe(3);expect(keys[1]).toBe(keys[2]);expect(keys[0]).not.toBe(keys[1]);
+});

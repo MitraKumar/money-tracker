@@ -77,3 +77,9 @@ Chat Send is connected to the authenticated Worker AI parser. Successful suggest
 Overview shows confirmed income, expenses, net cash flow, category bars, daily income/expense lines, and expandable exact daily values. Change the month and select Load month. Empty months show empty states rather than invented activity.
 
 Authenticated `GET /api/reports?month=YYYY-MM` returns a consistent SQL snapshot of monthly totals, category expenses, daily totals, and recent records. The existing transactions response includes the same report data. `GET /api/export?month=YYYY-MM` downloads all confirmed entries for that account/month as INR CSV, independent of client search filters and the 100-row display limit. CSV fields are quoted and formula-like text is neutralized for spreadsheet opening. No new database migration is required.
+
+## Transactions
+
+Transactions now provides a desktop table/mobile list, description/type/category/date filters, sorting, matching totals, and Load more over the current month’s loaded records. Details use `/transactions/?transaction=<id>`. Edits and deletion call authenticated `/api/transactions/update` and `/api/transactions/delete`, with an expected revision and operation request ID. Conflicts preserve unsaved edits and offer an explicit reload; unknown outcomes retry the same request with inputs locked.
+
+Apply migration `0004_transaction_revisions.sql` before deploying this version (`npm run db:local` / `npm run db:remote`). It adds revision/operation fields and a deletion marker. Deletion is logical: entries disappear from lists, reports, and CSV; retained markers prevent old confirmations from recreating them. Permanent data purging/account deletion remains PRIV-01. There is no general cursor-paginated API yet; the pilot still caps accounts at 100 active records.

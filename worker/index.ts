@@ -11,7 +11,7 @@ interface Env extends AuthEnv {
   AI_ENABLED: string;
 }
 type ParseRow = { id: string; input: string; result: string | null };
-type TransactionRow = { id: string; payload: string; request_id: string; source_parse_id: string | null; amount_minor: number; created_at: number };
+type TransactionRow = { id: string; payload: string; request_id: string; source_parse_id: string | null; amount_minor: number; created_at: number; revision: number; deleted_at: number | null; last_operation_id: string | null };
 class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -34,7 +34,7 @@ async function body(request: Request): Promise<unknown> {
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
   try { return JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new ApiError(400, "Invalid JSON."); }
 }
-function record(row: TransactionRow) { return { ...JSON.parse(row.payload), id: row.id, amount_minor: row.amount_minor, created_at: row.created_at }; }
+function record(row: TransactionRow) { return { ...JSON.parse(row.payload), id: row.id, amount_minor: row.amount_minor, created_at: row.created_at, revision: row.revision }; }
 
 async function withTimeout<T>(work: Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -75,7 +75,7 @@ async function api(request: Request, env: Env) {
     if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month)) throw new ApiError(400, "Invalid month.");
     const bounds = [owner, `${month}-01`, `${month}-32`];
     if (url.pathname === "/api/export") {
-      const { results } = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? ORDER BY date,created_at,id").bind(...bounds).all<TransactionRow>();
+      const { results } = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE deleted_at IS NULL AND user_id=? AND date>=? AND date<? ORDER BY date,created_at,id").bind(...bounds).all<TransactionRow>();
       return new Response(transactionCsv(results.map(record)), {headers:{
         "Content-Type":"text/csv; charset=utf-8",
         "Content-Disposition":`attachment; filename="money-tracker-${month}.csv"`,
@@ -84,13 +84,48 @@ async function api(request: Request, env: Env) {
     }
     // D1 batches execute in one transaction so every report shares a snapshot.
     const [rows, totals, categories, days] = await env.DB.batch([
-      env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? ORDER BY date DESC,created_at DESC,id DESC LIMIT 100").bind(...bounds),
-      env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END),0) income, COALESCE(SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END),0) expenses FROM ledger_transactions WHERE user_id=? AND date>=? AND date<?").bind(...bounds),
-      env.DB.prepare("SELECT category,SUM(amount_minor) amount_minor FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? AND type='expense' GROUP BY category ORDER BY amount_minor DESC,category").bind(...bounds),
-      env.DB.prepare("SELECT date, SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END) income, SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END) expenses FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? GROUP BY date ORDER BY date").bind(...bounds),
+      env.DB.prepare("SELECT * FROM ledger_transactions WHERE deleted_at IS NULL AND user_id=? AND date>=? AND date<? ORDER BY date DESC,created_at DESC,id DESC LIMIT 100").bind(...bounds),
+      env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END),0) income, COALESCE(SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END),0) expenses FROM ledger_transactions WHERE deleted_at IS NULL AND user_id=? AND date>=? AND date<?").bind(...bounds),
+      env.DB.prepare("SELECT category,SUM(amount_minor) amount_minor FROM ledger_transactions WHERE deleted_at IS NULL AND user_id=? AND date>=? AND date<? AND type='expense' GROUP BY category ORDER BY amount_minor DESC,category").bind(...bounds),
+      env.DB.prepare("SELECT date, SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END) income, SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END) expenses FROM ledger_transactions WHERE deleted_at IS NULL AND user_id=? AND date>=? AND date<? GROUP BY date ORDER BY date").bind(...bounds),
     ]);
     return json({ transactions: rows.results.map(row => record(row as unknown as TransactionRow)), summary:totals.results[0], month,
       report:{categories:categories.results,days:days.results} });
+  }
+
+  if (url.pathname === "/api/transactions/detail" && request.method === "GET") {
+    const id = requestIdSchema.parse(url.searchParams.get("id"));
+    const row = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE id=? AND user_id=? AND deleted_at IS NULL").bind(id, owner).first<TransactionRow>();
+    if (!row) throw new ApiError(404, "This transaction is no longer available.");
+    return json({transaction:record(row)});
+  }
+
+  if (["/api/transactions/update", "/api/transactions/delete"].includes(url.pathname) && request.method === "POST") {
+    const deleting = url.pathname.endsWith("/delete");
+    const common = {id:requestIdSchema,requestId:requestIdSchema,expectedRevision:z.number().int().positive()};
+    const input = (deleting ? z.object(common).strict() : z.object({...common,entry:entrySchema}).strict()).parse(await body(request));
+    const row = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE id=? AND user_id=?").bind(input.id, owner).first<TransactionRow>();
+    if (!row) throw new ApiError(404, "This transaction is no longer available.");
+    const entry = "entry" in input ? entrySchema.parse(input.entry) : undefined;
+    const payload = entry ? JSON.stringify(entry) : undefined;
+    if (row.last_operation_id === input.requestId) {
+      if (row.revision !== input.expectedRevision + 1 || (deleting ? !row.deleted_at : row.deleted_at || row.payload !== payload))
+        throw new ApiError(409, "This request already completed with different details.");
+      return deleting ? json({deleted:true,id:row.id}) : json({transaction:record(row),replayed:true});
+    }
+    if (row.deleted_at) throw new ApiError(404, "This transaction was deleted. Refresh your records.");
+    if (row.revision !== input.expectedRevision) throw new ApiError(409, "This transaction changed elsewhere. Reload the saved version before editing again.");
+    if (deleting) {
+      const deleted = await env.DB.prepare("UPDATE ledger_transactions SET deleted_at=?,revision=revision+1,last_operation_id=? WHERE id=? AND user_id=? AND revision=? AND deleted_at IS NULL RETURNING id")
+        .bind(Date.now(),input.requestId,input.id,owner,input.expectedRevision).first();
+      if (!deleted) throw new ApiError(409, "This transaction changed elsewhere. Reload the saved version.");
+      return json({deleted:true,id:input.id});
+    }
+    if (!entry) throw new ApiError(400,"Missing transaction details.");
+    const updated = await env.DB.prepare("UPDATE ledger_transactions SET type=?,amount_minor=?,date=?,category=?,description=?,payload=?,revision=revision+1,last_operation_id=? WHERE id=? AND user_id=? AND revision=? AND deleted_at IS NULL RETURNING *")
+      .bind(entry.type,toMinorUnits(entry.amount),entry.date,entry.category,entry.description,payload,input.requestId,input.id,owner,input.expectedRevision).first<TransactionRow>();
+    if (!updated) throw new ApiError(409, "This transaction changed elsewhere. Reload the saved version.");
+    return json({transaction:record(updated)});
   }
 
   if (url.pathname === "/api/parse" && request.method === "POST") {
@@ -150,6 +185,7 @@ async function api(request: Request, env: Env) {
     const previous = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND (request_id=? OR (? IS NOT NULL AND source_parse_id=?))")
       .bind(owner, input.requestId, input.draftId, input.draftId).first<TransactionRow>();
     if (previous) {
+      if (previous.deleted_at) throw new ApiError(409, "This transaction was deleted. Start a new entry to record it again.");
       if (previous.payload !== payload) throw new ApiError(409, "This save already completed with different details. Reload your records.");
       return json({ transaction: record(previous), replayed: true });
     }
@@ -159,12 +195,12 @@ async function api(request: Request, env: Env) {
     }
     const id = crypto.randomUUID();
     const saved = await env.DB.prepare(`INSERT OR IGNORE INTO ledger_transactions(id,user_id,request_id,source_parse_id,type,amount_minor,date,category,description,payload,created_at)
-      SELECT ?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM ledger_transactions WHERE user_id=?)<100
-      AND (SELECT COUNT(*) FROM ledger_transactions)<5000 RETURNING *`)
+      SELECT ?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM ledger_transactions WHERE deleted_at IS NULL AND user_id=?)<100
+      AND (SELECT COUNT(*) FROM ledger_transactions WHERE deleted_at IS NULL)<5000 RETURNING *`)
       .bind(id, owner, input.requestId, input.draftId, input.entry.type, toMinorUnits(input.entry.amount), input.entry.date, input.entry.category, input.entry.description, payload, Date.now(), owner).first<TransactionRow>();
     if (!saved) {
       const replay = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND (request_id=? OR source_parse_id=?)").bind(owner, input.requestId, input.draftId).first<TransactionRow>();
-      if (replay?.payload === payload) return json({ transaction: record(replay), replayed: true });
+      if (replay && !replay.deleted_at && replay.payload === payload) return json({ transaction: record(replay), replayed: true });
       throw new ApiError(409, "App capacity reached or this entry was already saved. Refresh your records.");
     }
     return json({ transaction: record(saved) }, 201);

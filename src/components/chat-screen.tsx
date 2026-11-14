@@ -4,20 +4,17 @@ import { ChatComposer, ChatComposerInput, ChatSendButton, ChatMessage, ChatMessa
 import { Timestamp } from "@astryxdesign/core/Timestamp";
 import { Button } from "@astryxdesign/core/Button";
 import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
-import { Grid } from "@astryxdesign/core/Grid";
 import { Heading } from "@astryxdesign/core/Heading";
 import { HStack } from "@astryxdesign/core/HStack";
-import { Selector } from "@astryxdesign/core/Selector";
 import { Text } from "@astryxdesign/core/Text";
-import { TextInput } from "@astryxdesign/core/TextInput";
 import { VStack } from "@astryxdesign/core/VStack";
 import { TransactionPreview } from "./transaction-preview";
-import { categories, type Entry } from "@/lib/ledger";
-import { label, useTracker } from "./tracker-provider";
+import { TransactionFields } from "./transaction-fields";
+import { useTracker } from "./tracker-provider";
 import { ConnectionStatus, PageHeading } from "./tracker-parts";
 
 export function ChatScreen() {
-  const {ready,busy,message,text,draft,uncertainSave,parse,save,edit,startManual,cancelDraft,changeText,changeType,chatLines,chatError,previews,activePreview,startSeparateEntry}=useTracker();
+  const {ready,busy,message,text,draft,uncertainSave,parse,save,setEntry,startManual,cancelDraft,changeText,chatLines,chatError,previews,activePreview,startSeparateEntry}=useTracker();
   const composing = useRef(false);
   const input = useRef<ChatComposerInputHandle>(null);
   const focusSeparateEntry = useRef(false);
@@ -98,15 +95,7 @@ export function ChatScreen() {
               {draft && <>
               <VStack gap={4} paddingInline={5} paddingBlock={3} style={{minHeight:0, overflowY:"auto", flex:"1 1 auto"}}>
                 {message !== "Enter the details and confirm to save." && <Text as="p" role="status" aria-live="polite">{message}</Text>}
-                <Grid columns={{minWidth:200,max:2}} gap={4}>
-                <Selector label="Type" options={[{value:"expense",label:"Expense"},{value:"income",label:"Income"}]} value={draft.entry.type}
-                  onChange={(value) => changeType(value as Entry["type"])} isDisabled={busy || uncertainSave} />
-                <TextInput label="Amount (INR)" value={draft.entry.amount} inputMode="decimal" onChange={(value) => edit("amount", value)} isDisabled={busy || uncertainSave} width="100%" />
-                <Selector label="Category" options={categories.filter((category) => draft.entry.type === "income" ? ["salary","other-income"].includes(category) : !["salary","other-income"].includes(category)).map((category) => ({value:category,label:label(category)}))}
-                  value={draft.entry.category} onChange={(value) => edit("category", value as Entry["category"])} isDisabled={busy || uncertainSave} />
-                <TextInput label="Date (YYYY-MM-DD)" value={draft.entry.date} onChange={(value) => edit("date", value)} isDisabled={busy || uncertainSave} width="100%" />
-                </Grid>
-                <TextInput label="Description" value={draft.entry.description} onChange={(value) => edit("description", value)} isDisabled={busy || uncertainSave} width="100%" />
+                <TransactionFields value={draft.entry} onChange={setEntry} isDisabled={busy || uncertainSave} showErrors />
               </VStack>
                 <HStack wrap="wrap" hAlign="end" gap={3} padding={5} style={{flexShrink:0}}>
                   <Button label="Cancel" variant="ghost" onClick={cancelDraft} isDisabled={busy || uncertainSave} />

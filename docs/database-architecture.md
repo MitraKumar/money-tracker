@@ -193,3 +193,7 @@ Dashboard queries read only `transactions`, filtered by session user, currency, 
 Use D1 Time Travel for operational recovery and independent exports for longer retention. A restore can reintroduce recently deleted records; deletion procedures must account for restored backups. Do not copy production financial data into development casually.
 
 Additional billing counters/rate-limit storage can be introduced when the AI integration is implemented. Keep them separate from the financial ledger and do not interpret chat message counts as exact model usage.
+
+## Current POC transaction revisions
+
+Migration 0004 adds `revision`, `deleted_at`, and `last_operation_id` to account transactions. Updates/deletions condition on owner, active status, and expected revision, then increment the revision. Replaying the last completed operation with the same original revision/payload returns its acknowledgment; stale operations conflict. Deleted rows remain as provenance/idempotency markers and are excluded from ledger/report/export queries. A late confirmation referencing their original request or parse cannot recreate them. Permanent purging, full request-operation history, general cursor pagination, and the broader planned draft schema remain separate work.

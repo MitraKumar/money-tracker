@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@astryxdesign/core/Button";
 import { Heading } from "@astryxdesign/core/Heading";
 import { HStack } from "@astryxdesign/core/HStack";
 import { List, ListItem } from "@astryxdesign/core/List";
-import { Selector } from "@astryxdesign/core/Selector";
 import { Text } from "@astryxdesign/core/Text";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { VStack } from "@astryxdesign/core/VStack";
@@ -37,26 +35,7 @@ export function OverviewScreen() {
   </>;
 }
 
-export function TransactionsScreen() {
-  const {ledger}=useTracker();
-  const [search,setSearch]=useState("");
-  const [type,setType]=useState("all");
-  const transactions=(ledger?.transactions??[]).filter(entry=>(type==="all"||entry.type===type)&&entry.description.toLowerCase().includes(search.toLowerCase()));
-  return <>
-    <PageHeading eyebrow="YOUR RECORDS" title="Every little entry." description="Your confirmed income and expenses, all in one place." />
-    <ConnectionStatus /><MonthFilter />
-    <HStack gap={4} wrap="wrap" vAlign="end">
-      <TextInput label="Search descriptions" value={search} onChange={setSearch} type="search" width="100%" />
-      <Selector label="Type" value={type} onChange={setType} options={[{value:"all",label:"All entries"},{value:"expense",label:"Expenses"},{value:"income",label:"Income"}]} />
-    </HStack>
-    <Text type="supporting">{ledger ? `${transactions.length} of ${ledger.transactions.length} entries · ${ledger.month}` : "Loading your records…"}</Text>
-    {ledger && (ledger.transactions.length && !transactions.length
-      ? <VStack gap={3}><Text>No matches in this month.</Text><Button label="Clear filters" onClick={()=>{setSearch("");setType("all");}} variant="ghost" /></VStack>
-      : <TransactionRows transactions={transactions} />)}
-    <MonthlyExport />
-    <Text type="supporting">Search covers this month’s saved entries. The current pilot supports up to 100 records per account. Editing will follow.</Text>
-  </>;
-}
+export { TransactionsScreen } from "./transactions-screen";
 
 export function SettingsScreen() {
   const {user,signOut,busy}=useTracker();

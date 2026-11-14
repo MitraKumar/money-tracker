@@ -7,11 +7,11 @@ This is the implementation tracker across sessions. The architecture documents d
 | Item | Status |
 | --- | --- |
 | Foundation | Next.js + TypeScript + Astryx Matcha starter implemented |
-| Latest implementation commit | `0ff65eb` — authenticated AI extraction and confirmation |
-| Working product | Deployed account-owned POC: AI/manual entry → editable confirmation modal → D1 records and monthly totals |
+| Latest implementation commit | `0d0b499` — monthly reporting charts and CSV export |
+| Working product | Deployed account-owned POC: AI/manual confirmation, transaction details/edit/delete, monthly charts/totals and CSV |
 | Backend | Worker + D1 + capped live AI + configured Google OAuth; Google sign-in confirmed by user; full MVP schema remains open |
-| Next task | **UI-04 — reusable manual transaction form** |
-| Active task | **None — UI-06 / DATA-03 reporting deployed** |
+| Next task | **UI-07 — onboarding/settings; finish DATA-02 API pagination separately** |
+| Active task | **None — UI-04 / UI-05 and transaction edit/delete APIs deployed** |
 | External setup needed later | OAuth secrets/callback configured; Google sign-in confirmed; remaining OPS-01 checks cover live cross-browser access/isolation, logout, and runtime usage |
 
 ## How to use this tracker
@@ -46,8 +46,8 @@ Build realistic UI states before connecting the backend. Keep fixture data clear
 - [x] **UI-01 — Application shell and routes** · Depends on SETUP-02. Add `/login`, `/setup`, `/chat`, `/overview`, `/transactions`, `/settings`, shared desktop navigation, mobile bottom navigation, and profile menu. Done when each route survives direct navigation in the static export, current navigation is identified accessibly, and layouts work on mobile/desktop. Keep arbitrary record/thread IDs in query parameters.
 - [x] **UI-02 — Chat composition and history** · Depends on UI-01. Add Astryx chat layout, date-grouped messages, timestamps, example prompts that fill without sending, composer, and manual-entry access. Done when keyboard/IME behavior is correct, input survives simulated errors, and the mobile keyboard does not cover controls. Use fixture responses only at this stage.
 - [x] **UI-03 — Transaction preview and clarification** · Depends on UI-02. Build draft states, editable amount/type/category/date/description, one active clarification context, cancel, saving, saved receipt, and unknown-save status. Done when fixture interactions show every state accurately, category edits require no AI call, and nothing appears saved before a simulated acknowledgment.
-- [ ] **UI-04 — Manual transaction form** · Depends on UI-01. Build reusable amount, direction, category, date, and description inputs. Done when errors are inline, values are retained on failure, and the same form can support draft and saved-record editing. Define a typed submit boundary for later API integration.
-- [ ] **UI-05 — Transactions view** · Depends on UI-04. Desktop table/mobile list, filters, cursor/load-more UI, details, edit, delete confirmation, export scope, and conflict/loading/empty states. Done when fixture controls work and no destructive action silently succeeds.
+- [x] **UI-04 — Manual transaction form** · Depends on UI-01. Build reusable amount, direction, category, date, and description inputs. Done when errors are inline, values are retained on failure, and the same form can support draft and saved-record editing. Define a typed submit boundary for later API integration.
+- [x] **UI-05 — Transactions view** · Depends on UI-04. Desktop table/mobile list, filters, cursor/load-more UI, details, edit, delete confirmation, export scope, and conflict/loading/empty states. Done when fixture controls work and no destructive action silently succeeds.
 - [x] **UI-06 — Monthly overview** · Depends on UI-01. Income, expenses, net cash flow, category bars, daily trend, recent records, month switcher, and accessible chart alternatives. Done when all fixture totals reconcile and empty months show honest empty states. Add Recharts only when needed and use Matcha tokens.
 - [ ] **UI-07 — Login, onboarding, and settings** · Depends on UI-01. Google sign-in affordance, currency/timezone setup, profile/sign-out, retention explanation, export/account deletion UI. Done when fixture states cover errors/session expiry and destructive actions require confirmation. Currency locking after ledger creation must be explained.
 
@@ -71,7 +71,8 @@ Implemented in `wrangler.jsonc`, `worker/index.ts`, `.dev.vars.example`, and REA
 - [x] Local D1 migrations, signed-session integration checks, anonymous runtime smoke checks, type/lint/static build/Astryx/deployment dry run, and 15 responsive UI checks with mocked account boundaries.
 - [x] Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `BETTER_AUTH_SECRET` as Worker secrets, plus Google's exact callback URL. See [setup instructions](docs/google-auth-setup.md).
 - [x] Deploy/configure Google authentication and complete real Google sign-in — confirmed by the user.
-- [ ] **OPS-01 follow-up:** record remote migration state, verify live same-user cross-browser access, different-user isolation and logout, and measure runtime CPU.
+- [x] Remote D1 migrations through 0004 applied; 0004 verified locally and remotely during transaction UI implementation.
+- [ ] **OPS-01 follow-up:** verify live same-user cross-browser access, different-user isolation and logout, and measure runtime CPU.
 
 AUTH-01 is complete: the user confirms real Google sign-in works. Existing signed-session integration tests cover account isolation, logout, expiry, and tampering. Live operational checks beyond sign-in remain tracked under OPS-01; they are not claimed as verified by this confirmation. No anonymous records were deleted or silently assigned to a Google account.
 
@@ -81,6 +82,10 @@ AUTH-01 is complete: the user confirms real Google sign-in works. Existing signe
 - [ ] **DATA-02 — Transaction CRUD and retries** · Depends on DATA-01. Add create/list/detail/edit/delete APIs, filters, pagination, save keys, and revision conflict checks. Done when replay returns one record, conflicting key reuse is rejected, stale edits fail safely, and another user cannot read or mutate any record.
 - [x] **DATA-03 — Summary and export APIs** · Depends on DATA-02. Add SQL monthly/category/day aggregates and scoped CSV export. Done when totals reconcile with exported transactions, drafts are excluded, user/date/currency filters match, and CSV escaping/formula-like values are handled safely.
 - [ ] **APP-01 — Connect ledger and overview UI** · Depends on DATA-03, UI-04, UI-05, UI-06, AUTH-02. Replace fixtures with real API responses for forms, lists, summaries, and exports. Done when manual entry, edit, and delete refresh all relevant views, uncertain requests resolve by their original keys, and session errors retain safe unsent input.
+
+### UI-04 / UI-05 completion evidence
+
+`TransactionFields` provides shared typed Entry inputs and field-level validation for manual entry, AI review, and saved-record editing. Transactions has a desktop Table/mobile List, filters, sorting, matching totals, 20-row Load more UI, collapsible filters, query-linked details, real edit/delete confirmation, loading/empty/error/conflict states, and monthly export scope. Detail/update/delete APIs enforce account ownership and expected revisions; unknown outcomes retain operation IDs with locked inputs. Migration 0004 adds revision and deletion markers so late confirmations cannot restore deleted records. Load more is explicitly client-side within the 100-active-record pilot cap; general API cursor pagination remains in DATA-02.
 
 ### UI-06 / DATA-03 completion evidence
 
@@ -114,21 +119,20 @@ Checked UI-02/UI-03 tasks record completion of their original fixture phase. The
 
 | Area / tasks | Already implemented | Still required before checking the task |
 | --- | --- | --- |
-| UI-04 | Responsive manual/AI review modal; typed Entry; validation before saving; values retained on failure | Extract reusable form/submit boundary; field-level inline errors; support future saved-record editing |
-| UI-05 / DATA-02 | Account-owned create/list, month selection, client search/type filters, idempotent confirmation | Details/edit/delete APIs and UI; pagination; revisions/conflicts; delete confirmation (month-scoped export is implemented) |
+| DATA-02 | Account-owned create/list/detail/update/delete, revision checks, repeat-operation recovery, tombstones preventing late confirmation resurrection; filtered/paged UI and monthly CSV | General server-side filter/cursor-pagination API and extended concurrent mutation coverage; pilot still loads at most 100 active rows |
 | UI-07 / AUTH-02 | Google sign-in/profile/sign-out, fixed INR/Asia/Kolkata, settings explanations | Persisted profiles and first-visit onboarding; configurable timezone; currency locking; export/deletion affordances and errors |
-| DB-01 | Generated Better Auth migration; account ledger/parse tables with ownership, money/category checks, indexes, and unique request keys | Full planned schema/Drizzle, profile/category/conversation/message/draft models, revisions and migration/constraint coverage |
-| OPS-01 | Completed AUTH-01 including user-confirmed real Google sign-in; local signed-session/isolation tests; deployed Worker/D1 | Record remote migration state; same-account cross-browser and different-account live checks; logout; runtime CPU/free-plan fit |
+| DB-01 | Generated Better Auth migration; account ledger/parse tables with ownership, money/category checks, indexes, and unique request keys | Full planned schema/Drizzle, profile/category/conversation/message/draft models, draft revisions and full migration/constraint coverage |
+| OPS-01 | Completed AUTH-01 including user-confirmed real Google sign-in; local signed-session/isolation tests; deployed Worker/D1 | Remote migrations through 0004 applied; remaining checks: same-account cross-browser and different-account live checks; logout; runtime CPU/free-plan fit |
 | CHAT-01 / CHAT-02 | Persisted parse input/results, deduplication keys, owner checks, one transaction per parse; client confirmation and retry | Conversation/message history APIs, paging/resume, recoverable processing leases/status, persistent draft states, clarification on the same draft with original date, revisions/cancel semantics and receipt recovery |
 | AI-01 / AI-02 | Constrained extraction, candidate validation, timeouts, safe diagnostics; live UI connection; salary/null-field regression tests | Representative extraction/prompt-injection evaluation, supported-language decision, measured model comparison/accuracy/latency/neurons and version records |
 | AI-03 | Atomic D1 request reservations; 10/account and 50/app parses per UTC day; input/output bounds, retry and manual fallback | Measured shared compute budget tied to usage; quota/exhaustion and concurrent-instance failure coverage; integration with recoverable chat operations |
-| APP-01 / APP-02 | Real manual and AI-confirmed saves; real list/month totals and refresh; unknown-save key reuse | Wire remaining CRUD/profile APIs; persistent chat/history/clarification and saved receipts. Verify signed-in live inference after latest deployment |
-| PRIV-01 | Legacy anonymous-session cleanup; account financial data survives session expiry | Disclosed raw-chat retention, account parse/message cleanup, conversation deletion preserving ledger, account deletion and regression checks |
+| APP-01 / APP-02 | Real manual/AI saves, transaction editing/deletion, reports/CSV, and refresh; safe same-key mutation retries | Wire profile/onboarding and eventual cursor pagination; persistent chat/history/clarification and saved receipts. Verify signed-in live inference after latest deployment |
+| PRIV-01 | Legacy anonymous-session cleanup; financial data survives session expiry; deleted transactions are hidden via retained markers | Disclosed raw-chat retention, account parse/message cleanup, conversation deletion preserving ledger, account deletion, permanent purge policy for soft-deleted financial rows, and regression checks |
 | OPS-02 / OPS-03 | Working Cloudflare POC deployment | Environment separation, backups/export/rollback, rehearsed restore, CPU/D1/AI measurements, quota tests and small pilot |
-| QA-01 / QA-02 | Auth/ownership/money/extraction unit/integration checks; historical responsive checks; six current mocked AI UI cases; modal viewport/focus checks | Migrate old fixture UI tests and navigation-through-open-modal expectations; full current workflow/concurrency/stale-revision coverage; physical mobile keyboard, screen reader, zoom, contrast and reduced-motion checks |
+| QA-01 / QA-02 | Auth/ownership/money/extraction unit/integration checks; historical responsive checks; six current mocked AI UI cases; transaction edit/delete/conflict/retry coverage; modal viewport/focus checks | Migrate old fixture UI tests and navigation-through-open-modal expectations; full current workflow/concurrency/stale-revision coverage; physical mobile keyboard, screen reader, zoom, contrast and reduced-motion checks |
 | MAINT-01 | Pinned packages and documented tooling/font warnings | CI, clean-checkout verification, advisory follow-up, Node type/runtime alignment |
 
-Suggested next steps: finish **UI-04**, migrate obsolete UI tests, and complete the remaining **OPS-01** operational checks. Then finish DB-01 and the transaction/reporting work before expanding persistent chat.
+Suggested next steps: implement **UI-07 / AUTH-02**, finish **DATA-02** server-side pagination, migrate obsolete UI tests, and complete **OPS-01** live operational checks. Full DB-01 and persistent chat remain separate work.
 
 ## Out of scope for the initial MVP
 
@@ -161,6 +165,8 @@ Append one row after each implementation session. Link the commit only if one wa
 | AUTH-01 confirmation | User confirms real Google sign-in works; marked AUTH-01 complete and corrected current handoff. Live cross-browser/isolation/logout/CPU checks remain under OPS-01 | UI-04 next; no product changes | Not committed |
 
 | UI-06 / DATA-03 | Added consistent account/month SQL aggregates, category bars, daily lines and exact daily data, zero-filled dates/empty states, and scoped CSV with quoting/formula protection. Reports include all confirmed rows beyond list display limit. All four unit/integration test files passed; three reporting browser cases passed at desktop/mobile/compact widths; screenshots inspected; lint/types/build/Astryx passed (existing font warnings). Deployed 216d6998-1ff0-467c-b74f-4bd920286faa; live Overview/health return 200 and anonymous reporting/export access returns 401 | UI-04 next; full CRUD, persistent chat, and broader QA remain open. Signed-in live report/export not independently exercised; no migration needed | Not committed |
+
+| UI-04 / UI-05 + transaction APIs | Shared typed fields/inline validation for manual, AI, and saved edits; desktop table/mobile rows, collapsible filters/sort, matching totals, local Load more, query-linked details, real edit/delete, conflict reload and same-operation recovery. Migration 0004 adds revision/deletion markers; applied locally/remotely. All four unit/integration files passed, including ownership/revision/replay/deleted-provenance/report cases. Six transaction UI scenarios and six AI scenarios passed across three widths; short 320/388×400 dialog actions verified; screenshots inspected; lint/types/build/Astryx passed (existing font warnings). Deployed a8dfe5a1-50e9-4620-8608-12934b0b0dc2; live page/health return 200, anonymous detail/update/delete return 401 | UI-07 next; DATA-02 general cursor/filter API remains open. Live signed-in destructive actions not exercised against customer data. No commit/push | Not committed |
 
 ## References
 

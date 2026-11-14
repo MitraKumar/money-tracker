@@ -146,3 +146,40 @@ test('monthly reports and CSV reconcile beyond list limit and isolate users/mont
  assert.equal((await call('/api/reports')).status,401);
  assert.equal((await call('/api/export')).status,401);
 });
+
+test('transaction edits/deletion enforce ownership, revisions, retries, and deleted provenance',async()=>{
+ const {call,createUser,createSession,db}=await setup();createUser('alice');createUser('bob');
+ const a=createSession('alice'),b=createSession('bob');
+ const entry={type:'expense',amount:'12.50',date:'2026-11-15',category:'dining',description:'Lunch'};
+ const draftId=randomUUID();
+ db.sqlite.prepare('INSERT INTO ledger_parses(id,user_id,request_id,day,input,result,created_at) VALUES(?,?,?,?,?,?,?)')
+  .run(draftId,'alice',randomUUID(),'2026-11-15','Lunch',JSON.stringify({status:'candidate',entry}),Date.now());
+ const original={requestId:randomUUID(),draftId,entry};
+ const created=await(await call('/api/transactions',{cookie:a.cookie,data:original})).json();
+ const id=created.transaction.id;
+ assert.equal(created.transaction.revision,1);
+ assert.equal((await call('/api/transactions/detail?id='+id,{cookie:b.cookie})).status,404);
+ const edit={id,requestId:randomUUID(),expectedRevision:1,entry:{...entry,amount:'20.01',date:'2026-12-01'}};
+ assert.equal((await call('/api/transactions/update',{cookie:b.cookie,data:edit})).status,404);
+ assert.equal((await call('/api/transactions/delete',{cookie:b.cookie,data:{id,requestId:randomUUID(),expectedRevision:1}})).status,404);
+ const updated=await call('/api/transactions/update',{cookie:a.cookie,data:edit});
+ assert.equal(updated.status,200);
+ assert.equal((await updated.json()).transaction.revision,2);
+ assert.equal((await call('/api/transactions/update',{cookie:a.cookie,data:edit})).status,200);
+ assert.equal((await call('/api/transactions/update',{cookie:a.cookie,data:{...edit,entry:{...edit.entry,amount:'9'}}})).status,409);
+ assert.equal((await call('/api/transactions/update',{cookie:a.cookie,data:{...edit,requestId:randomUUID()}})).status,409);
+ assert.equal((await call('/api/transactions/update',{cookie:a.cookie,data:{...edit,requestId:randomUUID(),expectedRevision:2,entry:{...edit.entry,amount:'-2'}}})).status,400);
+ const november=await(await call('/api/reports?month=2026-11',{cookie:a.cookie})).json();
+ const december=await(await call('/api/reports?month=2026-12',{cookie:a.cookie})).json();
+ assert.equal(november.summary.expenses,0);assert.equal(december.summary.expenses,2001);
+ const deletion={id,requestId:randomUUID(),expectedRevision:2};
+ assert.equal((await call('/api/transactions/delete',{cookie:a.cookie,data:deletion})).status,200);
+ assert.equal((await call('/api/transactions/delete',{cookie:a.cookie,data:deletion})).status,200);
+ assert.equal((await call('/api/transactions/detail?id='+id,{cookie:a.cookie})).status,404);
+ assert.equal((await call('/api/transactions',{cookie:a.cookie,data:original})).status,409);
+ assert.equal((await call('/api/transactions',{cookie:a.cookie,data:{...original,requestId:randomUUID()}})).status,409);
+ const gone=await(await call('/api/reports?month=2026-12',{cookie:a.cookie})).json();
+ assert.equal(gone.summary.expenses,0);assert.equal(gone.transactions.length,0);assert.deepEqual(gone.report.days,[]);
+ assert.equal((await(await call('/api/export?month=2026-12',{cookie:a.cookie})).text()).includes('Lunch'),false);
+ assert.equal(db.sqlite.prepare('SELECT revision FROM ledger_transactions WHERE id=?').get(id).revision,3);
+});

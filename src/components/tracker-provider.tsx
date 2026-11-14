@@ -13,8 +13,8 @@ type Ledger = { report?: MonthlyReport; transactions: Transaction[]; summary: { 
 type Draft = { entry: Entry; draftId: string | null };
 export type AppUser = { id: string; name: string; email: string; image?: string | null };
 type Save = { entry: Entry; draftId: string | null; requestId: string };
-class RequestError extends Error { constructor(message: string, public status: number) { super(message); } }
-async function api<T>(path: string, data?: unknown): Promise<T> {
+export class RequestError extends Error { constructor(message: string, public status: number) { super(message); } }
+export async function api<T>(path: string, data?: unknown): Promise<T> {
   const response = await fetch(path, data === undefined ? { cache: "no-store" } : {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
   });
@@ -168,6 +168,9 @@ function useTrackerState() {
       else { setUncertainSave(true); setMessage("Save status is unknown. Retry the same save below; it will not create a duplicate."); }
     } finally { setBusy(false); }
   }
+  function setEntry(entry: Entry) {
+    if (draft && !uncertainSave) setDraft({...draft,entry});
+  }
   function edit<K extends keyof Entry>(key: K, value: Entry[K]) {
     if (draft && !uncertainSave) setDraft({ ...draft, entry: { ...draft.entry, [key]: value } });
   }
@@ -192,7 +195,7 @@ function useTrackerState() {
     setChatError(false);
   }
   return { previews, previewAction, previewScenario, setPreviewScenario, activePreview, startSeparateEntry, chatLines, chatError, failNextChat, setFailNextChat, historyLoaded, loadChatHistory, user, authLoading, configured, signIn, signOut, ready, busy, text, message, draft, ledger, month, uncertainSave,
-    setMonth, parse, save, edit, startManual, cancelDraft, changeText, changeType, loadMonth };
+    refreshLedger: refresh, setMonth, parse, save, setEntry, edit, startManual, cancelDraft, changeText, changeType, loadMonth };
 }
 
 const TrackerContext = createContext<ReturnType<typeof useTrackerState> | null>(null);
