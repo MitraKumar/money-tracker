@@ -4,7 +4,7 @@ Start with [TODO.md](TODO.md) for task IDs, dependencies, acceptance criteria, a
 
 Next.js App Router + TypeScript + Astryx Matcha, with a same-origin Cloudflare Worker API, D1, and Workers AI. The new authentication implementation uses Better Auth and Google sign-in, with account-owned ledgers shared across devices and private to each user.
 
-**Google authentication is deployed and configured** at https://money-tracker-poc.kaushik0976.workers.dev. Live health, anonymous-access rejection, and Google authorization initiation have been verified. Completing a real Google consent/callback flow is still pending user verification. See [Google auth setup](docs/google-auth-setup.md) for exact callback URLs, secret commands, and launch verification. Changes do not automatically attach anonymous test data to a Google account.
+**Google authentication is deployed and configured** at https://money-tracker-poc.kaushik0976.workers.dev. Live health, anonymous-access rejection, and Google authorization initiation have been verified. Real Google sign-in has been confirmed by the user. See [Google auth setup](docs/google-auth-setup.md) for exact callback URLs, secret commands, and launch verification. Changes do not automatically attach anonymous test data to a Google account.
 
 ## Development
 

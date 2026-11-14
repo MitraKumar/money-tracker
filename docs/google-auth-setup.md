@@ -1,6 +1,6 @@
 # Google authentication setup
 
-The application now supports Google login through Better Auth on the Worker, backed by D1. A single Google account owns its ledger across devices; sessions no longer own or expire financial records. The user has deployed this version and configured the three Worker secrets. Live checks confirm D1 health, blocked anonymous access, and Google authorization initiation with the expected callback and state cookie. A real Google consent/token exchange still needs to be completed and checked.
+The application now supports Google login through Better Auth on the Worker, backed by D1. A single Google account owns its ledger across devices; sessions no longer own or expire financial records. The user has deployed this version and configured the three Worker secrets. Live checks confirm D1 health, blocked anonymous access, and Google authorization initiation with the expected callback and state cookie. The user confirms that real Google sign-in works; remaining live cross-browser, isolation, logout, and runtime checks are tracked under OPS-01.
 
 ## 1. Create the Google OAuth web client
 

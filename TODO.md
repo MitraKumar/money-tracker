@@ -7,12 +7,12 @@ This is the implementation tracker across sessions. The architecture documents d
 | Item | Status |
 | --- | --- |
 | Foundation | Next.js + TypeScript + Astryx Matcha starter implemented |
-| Latest implementation commit | UI-03 — transaction previews and Astryx chat components (this commit) |
-| Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
-| Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
-| Next task | **UI-04 — reusable manual transaction form; AUTH-01 real sign-in verification remains pending** |
-| Active task | **None — POC chat reconnected to authenticated AI API** |
-| External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
+| Latest implementation commit | `0ff65eb` — authenticated AI extraction and confirmation |
+| Working product | Deployed account-owned POC: AI/manual entry → editable confirmation modal → D1 records and monthly totals |
+| Backend | Worker + D1 + capped live AI + configured Google OAuth; Google sign-in confirmed by user; full MVP schema remains open |
+| Next task | **UI-04 — reusable manual transaction form** |
+| Active task | **None — TODO audit complete** |
+| External setup needed later | OAuth secrets/callback configured; Google sign-in confirmed; remaining OPS-01 checks cover live cross-browser access/isolation, logout, and runtime usage |
 
 ## How to use this tracker
 
@@ -37,7 +37,7 @@ Suggested session prompt:
 
 - [x] **POC-02 — Organization failure fix:** reproduced salary extraction returning a null description; added safe description fallback, clarification for incomplete financial fields, categorized privacy-safe diagnostics, and fresh-request retries after unavailable results. Verified repeated live salary/expense requests and browser retry regression.
 
-The proof is a deliberately smaller implementation. The API/database/UI tasks below remain open where their full acceptance criteria are not met: no Google login, full conversation/draft lifecycle, saved-record edits/deletion, CSV, charts, or measured production-cost guarantee. Reuse POC lessons rather than treating its schema as the production schema. Before a public pilot, measure request CPU/AI usage, test quota exhaustion and retention, and complete the security/identity tasks.
+The proof is a deliberately smaller implementation. The API/database/UI tasks below remain open where their full acceptance criteria are not met: full conversation/draft lifecycle, saved-record edits/deletion, CSV, charts, or measured production-cost guarantee. Reuse POC lessons rather than treating its schema as the production schema. Before a public pilot, measure request CPU/AI usage, test quota exhaustion and retention, and complete the security/identity tasks.
 
 ## Phase 1: Application UI with fixtures
 
@@ -53,11 +53,15 @@ Build realistic UI states before connecting the backend. Keep fixture data clear
 
 ## Phase 2: Cloudflare runtime and identity
 
-- [ ] **API-01 — Worker foundation and local development** · Depends on SETUP-02. Add Wrangler configuration, TypeScript Worker API, health endpoint, same-origin `/api/*` routing, local frontend/API workflow, and environment example. Done when static assets bypass API execution, exported deep links work, and a request reaches the Worker locally. Keep Next.js statically exported; do not introduce server-only Next.js features.
+- [x] **API-01 — Worker foundation and local development** · Depends on SETUP-02. Add Wrangler configuration, TypeScript Worker API, health endpoint, same-origin `/api/*` routing, local frontend/API workflow, and environment example. Done when static assets bypass API execution, exported deep links work, and a request reaches the Worker locally. Keep Next.js statically exported; do not introduce server-only Next.js features.
 - [ ] **DB-01 — D1 schema and migrations** · Depends on API-01. Implement application schema with Drizzle, category seeds, ownership references, money/type checks, revisions, idempotency constraints, and indexes from the database plan. Generate the selected Better Auth schema rather than copying conceptual auth tables. Done when migrations apply to empty local D1 and constraints reject invalid/duplicate/cross-owner references. Coordinate the generated auth schema with AUTH-01.
-- [ ] **AUTH-01 — Google OAuth and D1 sessions** · Depends on DB-01. Integrate Better Auth, request-scoped runtime bindings, trusted origins/callbacks, secure cookies, session validation, logout, and expired-session handling. Done when login/logout works locally with configured credentials and two users have distinct sessions. Document external credential setup; do not commit secrets.
+- [x] **AUTH-01 — Google OAuth and D1 sessions** · Depends on DB-01. Integrate Better Auth, request-scoped runtime bindings, trusted origins/callbacks, secure cookies, session validation, logout, and expired-session handling. Done when login/logout works locally with configured credentials and two users have distinct sessions. Document external credential setup; do not commit secrets.
 - [ ] **AUTH-02 — Profiles and onboarding API** · Depends on AUTH-01, UI-07. Create/read/update profiles and connect login/setup/settings. Done when first visits require setup, returning users resume Chat, INR/timezone defaults are explicit, and profile changes cannot rewrite ledger history or change currency after records exist.
 - [ ] **OPS-01 — Cloudflare deployment proof** · Depends on AUTH-01, API-01. Deploy a development environment, test callback URLs plus authenticated D1 read/write, and measure CPU on session and API requests. Done when remote behavior is verified and results recorded. This task needs account configuration; a local build alone does not complete it. Confirm free-plan fit using measured limits before relying on it.
+
+### API-01 completion evidence
+
+Implemented in `wrangler.jsonc`, `worker/index.ts`, `.dev.vars.example`, and README development commands. Only `/api/*` runs the Worker first; exported static assets/deep links use the asset service. Local Worker/API and static-route smoke checks are recorded in the UI-01 and AUTH-01 session logs. Cloudflare deployment and live health checks are also recorded. This task does not require completion of the full database or OAuth flow.
 
 ### AUTH-01 handoff
 
@@ -66,16 +70,21 @@ Build realistic UI states before connecting the backend. Keep fixture data clear
 - [x] Google sign-in/sign-out UI, private-view gating, account profile, and removal of browser-demo access controls/copy.
 - [x] Local D1 migrations, signed-session integration checks, anonymous runtime smoke checks, type/lint/static build/Astryx/deployment dry run, and 15 responsive UI checks with mocked account boundaries.
 - [x] Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `BETTER_AUTH_SECRET` as Worker secrets, plus Google's exact callback URL. See [setup instructions](docs/google-auth-setup.md).
-- [ ] Apply additive migrations remotely, deploy, and verify real Google consent/callback, same-user cross-browser access, different-user isolation, logout, and runtime CPU.
+- [x] Deploy/configure Google authentication and complete real Google sign-in — confirmed by the user.
+- [ ] **OPS-01 follow-up:** record remote migration state, verify live same-user cross-browser access, different-user isolation and logout, and measure runtime CPU.
 
-AUTH-01 remains unchecked above because real Google login and deployment verification are pending. The user has deployed the Google-authenticated version to Cloudflare. Live checks confirm configured secrets, D1 health, rejected anonymous access, and Google authorization with the expected callback/state. No anonymous records were deleted or silently assigned to a Google account.
+AUTH-01 is complete: the user confirms real Google sign-in works. Existing signed-session integration tests cover account isolation, logout, expiry, and tampering. Live operational checks beyond sign-in remain tracked under OPS-01; they are not claimed as verified by this confirmation. No anonymous records were deleted or silently assigned to a Google account.
 
 ## Phase 3: Reliable manual ledger
 
-- [ ] **DATA-01 — Shared validation and owned data access** · Depends on DB-01, AUTH-01. Add Zod contracts, exact decimal-to-paise conversion, safe bounds, calendar/timezone handling, and user-scoped queries. Done when unit/integration checks cover decimals, invalid dates, ownership, and safe numeric bounds. Never accept a user ID from model output or a request body as authorization.
+- [x] **DATA-01 — Shared validation and owned data access** · Depends on DB-01, AUTH-01. Add Zod contracts, exact decimal-to-paise conversion, safe bounds, calendar/timezone handling, and user-scoped queries. Done when unit/integration checks cover decimals, invalid dates, ownership, and safe numeric bounds. Never accept a user ID from model output or a request body as authorization.
 - [ ] **DATA-02 — Transaction CRUD and retries** · Depends on DATA-01. Add create/list/detail/edit/delete APIs, filters, pagination, save keys, and revision conflict checks. Done when replay returns one record, conflicting key reuse is rejected, stale edits fail safely, and another user cannot read or mutate any record.
 - [ ] **DATA-03 — Summary and export APIs** · Depends on DATA-02. Add SQL monthly/category/day aggregates and scoped CSV export. Done when totals reconcile with exported transactions, drafts are excluded, user/date/currency filters match, and CSV escaping/formula-like values are handled safely.
 - [ ] **APP-01 — Connect ledger and overview UI** · Depends on DATA-03, UI-04, UI-05, UI-06, AUTH-02. Replace fixtures with real API responses for forms, lists, summaries, and exports. Done when manual entry, edit, and delete refresh all relevant views, uncertain requests resolve by their original keys, and session errors retain safe unsent input.
+
+### DATA-01 completion evidence
+
+`src/lib/ledger.ts` shares Zod contracts between UI and Worker, converts decimal text exactly to integer paise, bounds amounts/dates, validates real calendar dates and type/category combinations, and resolves the Asia/Kolkata accounting day. `worker/index.ts` derives ownership from the verified session and scopes ledger/parse queries by that user; request bodies cannot choose an owner. `tests/ledger.test.mjs` covers decimal precision, invalid/unsafe amounts, invalid dates, and timezone boundaries; `tests/auth.test.mjs` covers cross-account reads/writes and draft ownership. These implemented validation/access criteria are complete even though DB-01 retains its own remaining work. Configurable profile timezones belong to AUTH-02.
 
 ## Phase 4: Chat persistence and AI
 
@@ -95,6 +104,29 @@ AUTH-01 remains unchecked above because real Google login and deployment verific
 - [ ] **OPS-03 — Cost/performance and small pilot** · Depends on OPS-02, QA-01, QA-02, AI-03. Recheck current plan allowances, measure Worker CPU, D1 scans/storage growth, and AI usage under representative traffic; verify quota exhaustion behavior. Done when the whole application is deployed, a small real-user pilot passes, and measured limits/upgrade triggers are documented. Free operation remains conditional on these results.
 - [ ] **MAINT-01 — Dependency follow-up and CI** · Depends on SETUP-03. Recheck the documented development-tooling advisories, align Node types with the supported runtime, and add CI for lint, types, static build, Astryx diagnostics, and implemented tests. Done when clean-checkout checks run reproducibly and remaining dependency issues are explicitly recorded without forced unverified upgrades.
 
+## Remaining work — audited against current source
+
+Checked UI-02/UI-03 tasks record completion of their original fixture phase. The current deployed chat uses the live parser and confirmation modal; the removed fixture controls do not establish completion of persistent chat/clarification.
+
+| Area / tasks | Already implemented | Still required before checking the task |
+| --- | --- | --- |
+| UI-04 | Responsive manual/AI review modal; typed Entry; validation before saving; values retained on failure | Extract reusable form/submit boundary; field-level inline errors; support future saved-record editing |
+| UI-05 / DATA-02 | Account-owned create/list, month selection, client search/type filters, idempotent confirmation | Details/edit/delete APIs and UI; pagination; revisions/conflicts; delete confirmation; export scope |
+| UI-06 / DATA-03 | SQL monthly income/expense totals, net cash flow, recent records, client category totals | Category/day aggregate APIs; category bars/daily trend with accessible alternatives; scoped and safely escaped CSV |
+| UI-07 / AUTH-02 | Google sign-in/profile/sign-out, fixed INR/Asia/Kolkata, settings explanations | Persisted profiles and first-visit onboarding; configurable timezone; currency locking; export/deletion affordances and errors |
+| DB-01 | Generated Better Auth migration; account ledger/parse tables with ownership, money/category checks, indexes, and unique request keys | Full planned schema/Drizzle, profile/category/conversation/message/draft models, revisions and migration/constraint coverage |
+| OPS-01 | Completed AUTH-01 including user-confirmed real Google sign-in; local signed-session/isolation tests; deployed Worker/D1 | Record remote migration state; same-account cross-browser and different-account live checks; logout; runtime CPU/free-plan fit |
+| CHAT-01 / CHAT-02 | Persisted parse input/results, deduplication keys, owner checks, one transaction per parse; client confirmation and retry | Conversation/message history APIs, paging/resume, recoverable processing leases/status, persistent draft states, clarification on the same draft with original date, revisions/cancel semantics and receipt recovery |
+| AI-01 / AI-02 | Constrained extraction, candidate validation, timeouts, safe diagnostics; live UI connection; salary/null-field regression tests | Representative extraction/prompt-injection evaluation, supported-language decision, measured model comparison/accuracy/latency/neurons and version records |
+| AI-03 | Atomic D1 request reservations; 10/account and 50/app parses per UTC day; input/output bounds, retry and manual fallback | Measured shared compute budget tied to usage; quota/exhaustion and concurrent-instance failure coverage; integration with recoverable chat operations |
+| APP-01 / APP-02 | Real manual and AI-confirmed saves; real list/month totals and refresh; unknown-save key reuse | Wire remaining CRUD/report/export/profile APIs; persistent chat/history/clarification and saved receipts. Verify signed-in live inference after latest deployment |
+| PRIV-01 | Legacy anonymous-session cleanup; account financial data survives session expiry | Disclosed raw-chat retention, account parse/message cleanup, conversation deletion preserving ledger, account deletion and regression checks |
+| OPS-02 / OPS-03 | Working Cloudflare POC deployment | Environment separation, backups/export/rollback, rehearsed restore, CPU/D1/AI measurements, quota tests and small pilot |
+| QA-01 / QA-02 | Auth/ownership/money/extraction unit/integration checks; historical responsive checks; six current mocked AI UI cases; modal viewport/focus checks | Migrate old fixture UI tests and navigation-through-open-modal expectations; full current workflow/concurrency/stale-revision coverage; physical mobile keyboard, screen reader, zoom, contrast and reduced-motion checks |
+| MAINT-01 | Pinned packages and documented tooling/font warnings | CI, clean-checkout verification, advisory follow-up, Node type/runtime alignment |
+
+Suggested next steps: finish **UI-04**, migrate obsolete UI tests, and complete the remaining **OPS-01** operational checks. Then finish DB-01 and the transaction/reporting work before expanding persistent chat.
+
 ## Out of scope for the initial MVP
 
 Bank sync, receipt OCR, voice/WhatsApp entry, transfers/refunds without defined accounting semantics, multiple currencies/accounts, recurring entries, shared households, budgets, forecasts, AI advice, natural-language SQL, vector search, and offline financial saves. Track new requests separately rather than quietly expanding the tasks above.
@@ -108,16 +140,22 @@ Append one row after each implementation session. Link the commit only if one wa
 | SETUP-01–04 | Planning and frontend scaffold completed; starter build/lint/types/Astryx/browser checks passed | Start UI-01; all application/backend features remain open | `4b17397`, `a6acd5a` |
 | POC-01 | Dedicated Cloudflare deployment; local/remote D1 isolation/concurrency/totals and live AI extraction/confirmation verified; responsive local browser checks passed | UI-01 next; full MVP tasks and production CPU/cost/retention verification remain open; see deployment record | `4e3da26` |
 | POC-02 | Salary null-description regression and unchanged-text failure retry fixed; unit/type/lint/build/Astryx checks passed; live salary twice then expense and browser retry verified | Deployed version `05fed95b-f94b-4d5f-9f95-fd14ee998f51`; continue UI-01 | `4e3da26` |
-
 | UI-01 | Static routes and shared Astryx shell, desktop/sidebar and mobile navigation, profile dialog, route-preserved draft state, real summary/transaction views, search/type filters; unit/lint/type/build/Astryx/local API checks passed; 6 browser scenarios across 1440/390/320 widths passed locally and on the live deployment | Continue UI-02; deployed version `653d5712-cb5f-4b3d-8a51-c96ee07dc392`; full transcript, charts, full record actions, and Google account support remain incomplete | `935f5b8` |
-
 | AUTH-01 (partial) | Google auth and account-ledger implementation prepared; local migrations, signed-session/isolation tests, static checks and 15 fixture-based UI checks passed | User deployed/configured Cloudflare; live API protection and Google OAuth initiation verified; real Google token exchange remains unverified | Not committed |
-
 | UI-02 | Astryx chat layout/composer, day-grouped transcript and timestamps, fill-only prompts, example history, explicit simulated send failure/retry, navigation-preserved input/history, desktop Enter/Shift+Enter and IME guards, touch Return and manual access; type/lint/static build/unit checks and all 21 responsive Playwright scenarios passed; Astryx has zero failures (existing external-font warnings) | Continue UI-03. Chat responses/history are tab-memory fixtures; no parse/save request is issued by chat. Existing manual confirmation still uses the real ledger API. Physical software-keyboard checks remain in QA-02; AUTH-01 verification remains open. No deployment | `4b1a716` |
-
 | UI-03 | Added transcript-linked example previews, inline validated edits of all five fields, one amount-clarification context with retained invalid replies/reference date, cancellation/separate entry, locked saving/unknown/checking states, rejected-save recovery, and acknowledgment-only sample receipts. Unit/state-transition checks, types, lint, static build, all 30 responsive UI scenarios, and focused composer-focus checks passed; Astryx zero failures (existing font warnings) | Continue UI-04. Fixture actions make no API writes and never update real ledger totals; manual API path retained. Persistent drafts/confirmation remain CHAT-02 and APP-02; physical mobile-keyboard check remains QA-02. No deployment | This commit |
-
 | UI-03 follow-up | Replaced the general textarea/send button with ChatComposerInput and ChatSendButton; message content/previews now use ChatMessageBubble and dates use ChatSystemMessage dividers. Plain-text configuration, IME guards, mobile newline behavior, error retention, and 500-character validation preserved. Type/lint/build/unit checks and Astryx diagnostics passed; 30 responsive scenarios verified across the main and corrected touch-assertion runs | Continue UI-04; fixtures remain separate from real ledger operations. Physical software-keyboard verification remains QA-02. No deployment | This commit |
+| Temporary UI review | Added opt-in NEXT_PUBLIC_UI_REVIEW build and deploy:review command; pages use empty ledger and local chat fixtures with no account reads/manual writes. Lint/types/build/Astryx passed (existing font warnings); deployed version 6c58309c-6b58-4261-8254-540abaffeeea. Browser check blocked by missing Playwright Chromium executable | Review with Crit; restore normal authentication gate using npm run deploy. No commit/push | Not committed |
+| Crit chat review | Explained example controls/scenarios; removed right panel and redundant chat link; moved monthly totals to desktop sidebar/mobile menu bar; isolated scrolling transcript from composer. Lint/types/static build/Astryx passed (existing font warnings); focused Chromium checks at 1278/388/320 passed with screenshots inspected. Deployed 09e5925a-ef47-4b2e-ad68-f21b8b24a0f0 | Crit approved with all five comments resolved; public review mode remains temporary; UI-04 next | Not committed |
+| Chat cleanup | Removed example-history, send-error simulation, and response-scenario controls plus help text. Lint/types/static build/Astryx passed (existing font warnings). Deployed e1978ba3-0f2b-4c93-85b2-98bb74adc5da | UI-04 next; public review mode and default chat fixture remain | Not committed |
+| Manual entry modal | Moved existing manual form into Astryx Dialog with title, in-modal status, controlled dismissal, and protected saving/unknown outcomes. Lint/types/build/Astryx passed (existing font warnings); Chromium checks at 1278/388/320 verified opening, value retention after blocked review save, Cancel/Escape, focus return, viewport fit; mobile screenshot inspected. Deployed 0526e9e1-6cfb-48ff-b9e2-d26de911e4bd | UI-04 remains incomplete (reusable form and inline validation still pending); temporary review mode still blocks real saves | Not committed |
+| Manual modal follow-up | Enabled backdrop dismissal while idle; preserved pending/unknown save protection. Separated scrolling fields from header/action footer; explicit padding and viewport height prevent clipped buttons. Lint/types/build/Astryx passed (existing font warnings). Chromium checks passed at 1278×798, 388×842, 320×568, and 388×400 for complete action visibility after scrolling and backdrop dismissal after edits; screenshot inspected. Deployed bc83bf98-2ed3-4b54-af17-44dd2d586afd | UI-04 next; temporary review mode remains | Not committed |
+| Modal visual refinement | Padded body-font title/subtitle; reduced duplicate copy; responsive two-column fields on desktop and single column on mobile; aligned footer actions. Lint/types/build/Astryx passed (existing font warnings). Four Chromium viewport checks passed, desktop/mobile screenshots inspected. Deployed 2fb1451e-6761-406d-8f85-21f7c35ca4da | UI-04 remains open; temporary review mode remains | Not committed |
+| Restore sign-in | Removed NEXT_PUBLIC_UI_REVIEW, deploy:review command, review-only provider/shell/settings branches, and README instructions. Normal session reads, sign-in gating, and authenticated ledger operations restored. Lint/types/build/Astryx passed (existing font warnings); Chromium mocked-session checks verified five gated routes without signed-out ledger reads and signed-in modal access. Deployed edb566cc-dada-4428-98ea-323c55dfbd1a | UI-04 next; real Google callback verification remains pending | `1cd902f` |
+| POC AI reconnection | Replaced fixture Send with authenticated /api/parse; validates candidates and opens editable AI confirmation modal linked to server draft. Saves require explicit confirmation; failures retain text, completed unavailable retries use fresh keys, transport retries retain keys. Lint/types/unit/build/Astryx passed (existing font warnings); six focused browser cases passed across three widths for real API-bound candidate/save behavior and unavailable retries using mocks. Live health reports AI enabled/D1 connected; anonymous parser returns 401. Deployed 5883d792-bf51-411f-ab1c-1f3595faa579 | Real signed-in inference after deployment still needs verification. Full persistent chat/clarification remains open; older fixture UI scenarios need migration to API mocks. UI-04 remains open | `0ff65eb` |
+| TODO audit | Reconciled source, migrations, tests, and deployment records; marked API-01 and DATA-01 complete; corrected stale handoff and documented partial tasks/verification gaps. npm test passed (all three test files); diff whitespace check passed | Finish UI-04, verify live OAuth/AI, migrate obsolete UI tests; no product changes | Not committed |
+
+| AUTH-01 confirmation | User confirms real Google sign-in works; marked AUTH-01 complete and corrected current handoff. Live cross-browser/isolation/logout/CPU checks remain under OPS-01 | UI-04 next; no product changes | Not committed |
 
 ## References
 
@@ -127,19 +165,3 @@ Append one row after each implementation session. Link the commit only if one wa
 - [Application approach](docs/approach.md)
 - [Cloudflare feasibility](docs/cloudflare-feasibility.md)
 - [Development commands and known setup limitations](README.md)
-
-| Temporary UI review | Added opt-in NEXT_PUBLIC_UI_REVIEW build and deploy:review command; pages use empty ledger and local chat fixtures with no account reads/manual writes. Lint/types/build/Astryx passed (existing font warnings); deployed version 6c58309c-6b58-4261-8254-540abaffeeea. Browser check blocked by missing Playwright Chromium executable | Review with Crit; restore normal authentication gate using npm run deploy. No commit/push | Not committed |
-
-| Crit chat review | Explained example controls/scenarios; removed right panel and redundant chat link; moved monthly totals to desktop sidebar/mobile menu bar; isolated scrolling transcript from composer. Lint/types/static build/Astryx passed (existing font warnings); focused Chromium checks at 1278/388/320 passed with screenshots inspected. Deployed 09e5925a-ef47-4b2e-ad68-f21b8b24a0f0 | Crit approved with all five comments resolved; public review mode remains temporary; UI-04 next | Not committed |
-
-| Chat cleanup | Removed example-history, send-error simulation, and response-scenario controls plus help text. Lint/types/static build/Astryx passed (existing font warnings). Deployed e1978ba3-0f2b-4c93-85b2-98bb74adc5da | UI-04 next; public review mode and default chat fixture remain | Not committed |
-
-| Manual entry modal | Moved existing manual form into Astryx Dialog with title, in-modal status, controlled dismissal, and protected saving/unknown outcomes. Lint/types/build/Astryx passed (existing font warnings); Chromium checks at 1278/388/320 verified opening, value retention after blocked review save, Cancel/Escape, focus return, viewport fit; mobile screenshot inspected. Deployed 0526e9e1-6cfb-48ff-b9e2-d26de911e4bd | UI-04 remains incomplete (reusable form and inline validation still pending); temporary review mode still blocks real saves | Not committed |
-
-| Manual modal follow-up | Enabled backdrop dismissal while idle; preserved pending/unknown save protection. Separated scrolling fields from header/action footer; explicit padding and viewport height prevent clipped buttons. Lint/types/build/Astryx passed (existing font warnings). Chromium checks passed at 1278×798, 388×842, 320×568, and 388×400 for complete action visibility after scrolling and backdrop dismissal after edits; screenshot inspected. Deployed bc83bf98-2ed3-4b54-af17-44dd2d586afd | UI-04 next; temporary review mode remains | Not committed |
-
-| Modal visual refinement | Padded body-font title/subtitle; reduced duplicate copy; responsive two-column fields on desktop and single column on mobile; aligned footer actions. Lint/types/build/Astryx passed (existing font warnings). Four Chromium viewport checks passed, desktop/mobile screenshots inspected. Deployed 2fb1451e-6761-406d-8f85-21f7c35ca4da | UI-04 remains open; temporary review mode remains | Not committed |
-
-| Restore sign-in | Removed NEXT_PUBLIC_UI_REVIEW, deploy:review command, review-only provider/shell/settings branches, and README instructions. Normal session reads, sign-in gating, and authenticated ledger operations restored. Lint/types/build/Astryx passed (existing font warnings); Chromium mocked-session checks verified five gated routes without signed-out ledger reads and signed-in modal access. Deployed edb566cc-dada-4428-98ea-323c55dfbd1a | UI-04 next; real Google callback verification remains pending. Changes not committed | Not committed |
-
-| POC AI reconnection | Replaced fixture Send with authenticated /api/parse; validates candidates and opens editable AI confirmation modal linked to server draft. Saves require explicit confirmation; failures retain text, completed unavailable retries use fresh keys, transport retries retain keys. Lint/types/unit/build/Astryx passed (existing font warnings); six focused browser cases passed across three widths for real API-bound candidate/save behavior and unavailable retries using mocks. Live health reports AI enabled/D1 connected; anonymous parser returns 401. Deployed 5883d792-bf51-411f-ab1c-1f3595faa579 | Real signed-in inference after deployment still needs verification. Full persistent chat/clarification remains open; older fixture UI scenarios need migration to API mocks. UI-04 remains open. No commit/push | Not committed |
