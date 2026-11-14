@@ -2,6 +2,10 @@
 
 Project-specific guidance for AI coding agents.
 
+## Task tracking across sessions
+
+Read `TODO.md` before starting implementation. It tracks completed work, task dependencies, and the current handoff. Update the active task when starting, then record actual progress, checks, blockers, and the next step at the end of the session. Keep unfinished tasks unchecked; fixture-only screens do not count as backend integration. Preserve the agreed Cloudflare/static-export architecture and read the linked design documents for the task being implemented. Commit and push only when requested.
+
 <!-- ASTRYX:START -->
 Astryx v0.7.16 · 174 components
 CLI: run every command as `npx astryx <cmd>` (shown below as `astryx ...`).

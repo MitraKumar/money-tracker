@@ -1,5 +1,7 @@
 # Money Tracker
 
+Start with [TODO.md](TODO.md) for task IDs, dependencies, acceptance criteria, and the handoff between sessions.
+
 Next.js App Router + TypeScript, with Astryx’s Matcha theme. The frontend is configured for static export, ready for the planned Cloudflare Static Assets + Worker API architecture.
 
 ## Development
