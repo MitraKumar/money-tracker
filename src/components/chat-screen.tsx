@@ -32,13 +32,11 @@ export function ChatScreen() {
     <ConnectionStatus />
     <VStack gap={8} width="100%">
       <VStack as="section" gap={5} aria-label="Chat entry">
-        <Text type="supporting">AI suggests one income or expense for you to review. Transactions are saved only after confirmation. Chat history stays in this tab until reload or sign-out.</Text>
         <VStack style={{height:"min(65dvh, 44rem)", minHeight:"22rem", width:"100%"}} gap={0}>
           <VStack gap={3} style={{height:"100%", minHeight:0}}>
             <ChatMessageList align="top" style={{flex:"1 1 0%", minHeight:0, overflowY:"auto", overflowX:"hidden"}}>
               {chatLines.length === 0 ? <VStack gap={3} padding={3}>
                 <Heading level={2} style={{fontFamily:"var(--font-family-body)"}}>What came in or went out?</Heading>
-                <Text>Try an entry. Choose a prompt to edit it before sending.</Text>
                 {["Spent ₹120 on lunch", "Received ₹25,000 salary today", "Paid ₹800 for groceries yesterday"].map(example =>
                   <Button key={example} label={example} variant="ghost" isDisabled={actionsDisabled||entryBlocked} onClick={() => {changeText(example);input.current?.focus();}} />)}
               </VStack> : [...groups].map(([day, lines]) => <VStack key={day} gap={4} as="section" aria-label={day}>
