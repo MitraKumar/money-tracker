@@ -11,7 +11,7 @@ This is the implementation tracker across sessions. The architecture documents d
 | Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
 | Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
 | Next task | **UI-04 — reusable manual transaction form; AUTH-01 real sign-in verification remains pending** |
-| Active task | **None — modal visual refinements deployed** |
+| Active task | **None — temporary review flag removed; sign-in restored** |
 | External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
 
 ## How to use this tracker
@@ -139,3 +139,5 @@ Append one row after each implementation session. Link the commit only if one wa
 | Manual modal follow-up | Enabled backdrop dismissal while idle; preserved pending/unknown save protection. Separated scrolling fields from header/action footer; explicit padding and viewport height prevent clipped buttons. Lint/types/build/Astryx passed (existing font warnings). Chromium checks passed at 1278×798, 388×842, 320×568, and 388×400 for complete action visibility after scrolling and backdrop dismissal after edits; screenshot inspected. Deployed bc83bf98-2ed3-4b54-af17-44dd2d586afd | UI-04 next; temporary review mode remains | Not committed |
 
 | Modal visual refinement | Padded body-font title/subtitle; reduced duplicate copy; responsive two-column fields on desktop and single column on mobile; aligned footer actions. Lint/types/build/Astryx passed (existing font warnings). Four Chromium viewport checks passed, desktop/mobile screenshots inspected. Deployed 2fb1451e-6761-406d-8f85-21f7c35ca4da | UI-04 remains open; temporary review mode remains | Not committed |
+
+| Restore sign-in | Removed NEXT_PUBLIC_UI_REVIEW, deploy:review command, review-only provider/shell/settings branches, and README instructions. Normal session reads, sign-in gating, and authenticated ledger operations restored. Lint/types/build/Astryx passed (existing font warnings); Chromium mocked-session checks verified five gated routes without signed-out ledger reads and signed-in modal access. Deployed edb566cc-dada-4428-98ea-323c55dfbd1a | UI-04 next; real Google callback verification remains pending. Changes not committed | Not committed |

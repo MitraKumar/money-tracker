@@ -60,15 +60,15 @@ function Profile() {
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const { isMobile } = useAppShellMobile();
-  const { user, authLoading, reviewMode } = useTracker();
+  const { user, authLoading } = useTracker();
   const current = useCurrentPath();
   return <Layout height="fill" contentWidth="72rem" content={
     <LayoutContent padding={isMobile ? 4 : 8}>
       <VStack gap={6}>{authLoading
         ? <Heading level={1}>Checking your sign-in…</Heading>
-        : !user && !reviewMode ? <LoginScreen /> : children}</VStack>
+        : !user ? <LoginScreen /> : children}</VStack>
     </LayoutContent>
-  } footer={isMobile && (user || reviewMode) ? <LayoutFooter hasDivider padding={3}>
+  } footer={isMobile && user ? <LayoutFooter hasDivider padding={3}>
     <VStack gap={3}>
     {current === "/chat" && <MonthlyTotals compact />}
     <HStack as="nav" aria-label="Mobile navigation" gap={1}
@@ -84,16 +84,16 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 
 export function TrackerShell({ children }: { children: React.ReactNode }) {
   const current = useCurrentPath();
-  const { user, reviewMode } = useTracker();
+  const { user } = useTracker();
   return <AppShell height="fill" variant="wash" contentPadding={0} mobileNav={{ hasToggle: false }}
     topNav={<TopNav label="App header" heading={<VStack gap={0}>
       <Text type="large" weight="bold">Money Tracker</Text><Text type="supporting">Your money, one entry at a time</Text>
     </VStack>} endContent={user ? <Profile /> : undefined} />}
-    sideNav={user || reviewMode ? <SideNav aria-label="Primary navigation" footer={<VStack gap={2} padding={4}>
+    sideNav={user ? <SideNav aria-label="Primary navigation" footer={<VStack gap={2} padding={4}>
       {current === "/chat" && <MonthlyTotals />}
       <Text type="label">A little clarity, every day.</Text>
       <Text type="supporting">INR · Asia/Kolkata</Text>
-      <Text type="supporting">{reviewMode ? "Temporary UI review · no account data" : "Signed in with Google"}</Text>
+      <Text type="supporting">Signed in with Google</Text>
     </VStack>}>
       <SideNavSection title="Your money">
         {destinations.map(({href,label}) => <SideNavItem key={href} label={label} href={href} as={Link} isSelected={current === href} />)}
