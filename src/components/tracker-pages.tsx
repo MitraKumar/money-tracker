@@ -11,7 +11,7 @@ import { VStack } from "@astryxdesign/core/VStack";
 import { useTracker } from "./tracker-provider";
 import { ConnectionStatus, MonthFilter, PageHeading, Summary, TransactionRows } from "./tracker-parts";
 
-import { MonthlyReportCharts, MonthlyExport } from "./monthly-report";
+import { MonthlyReportCharts } from "./monthly-report";
 
 const bodyHeading = { fontFamily: "var(--font-family-body)" };
 
@@ -24,7 +24,6 @@ export function OverviewScreen() {
     <Summary />
     <Text type="supporting">Net cash flow means recorded income minus expenses. It is not your bank balance.</Text>
     <MonthlyReportCharts />
-    <MonthlyExport />
     <VStack as="section" gap={3} aria-labelledby="recent-title">
       <HStack wrap="wrap" hAlign="between" vAlign="center" gap={3}>
         <Heading level={2} id="recent-title" style={bodyHeading}>Recent entries</Heading>
@@ -49,7 +48,7 @@ export function SettingsScreen() {
     </List>
     <VStack gap={3}>
       <Heading level={2} style={bodyHeading}>Before you add anything</Heading>
-      <Text as="p" color="secondary">Keep your Google account secure. Monthly CSV exports are available in Overview. Account-deletion controls are still being developed; this remains an early pilot.</Text>
+      <Text as="p" color="secondary">Keep your Google account secure. Monthly CSV exports are available in Transactions. Account-deletion controls are still being developed; this remains an early pilot.</Text>
       <HStack wrap="wrap" gap={3}><Button label="Sign out" onClick={()=>void signOut()} isDisabled={busy} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
     </VStack>
   </>;

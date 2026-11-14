@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@astryxdesign/core/Button";
 import { Grid } from "@astryxdesign/core/Grid";
 import { Heading } from "@astryxdesign/core/Heading";
 import { HStack } from "@astryxdesign/core/HStack";
@@ -14,7 +13,6 @@ import { label, useTracker } from "./tracker-provider";
 
 export function MonthlyReportCharts() {
   const { ledger } = useTracker();
-  const [showDays, setShowDays] = useState(false);
   if (!ledger) return <Text role="status">Loading monthly report…</Text>;
   if (!ledger.report) return <Text role="status">Monthly report is unavailable. Reload to retry.</Text>;
   const { categories, days } = ledger.report;
@@ -40,7 +38,7 @@ export function MonthlyReportCharts() {
       <Heading level={2} id="daily-title" style={{fontFamily:"var(--font-family-body)"}}>Daily activity</Heading>
       <Text type="supporting">Daily totals in INR · solid line: income · dashed line: expenses</Text>
       {days.length ? <>
-        <svg viewBox="0 0 600 190" width="100%" role="img" aria-label={`Daily income and expenses for ${ledger.month}. Exact amounts are available in daily data.`}>
+        <svg viewBox="0 0 600 190" width="100%" role="img" aria-label={`Daily income and expenses for ${ledger.month}.`}>
           <line x1="20" x2="580" y1="150" y2="150" stroke="var(--color-text-secondary)" />
           <polyline points={points("income")} fill="none" stroke="var(--color-text-primary)" strokeWidth="3" />
           <polyline points={points("expenses")} fill="none" stroke="var(--color-text-secondary)" strokeWidth="3" strokeDasharray="6 4" />
@@ -48,16 +46,12 @@ export function MonthlyReportCharts() {
           <text x="540" y="180" fill="var(--color-text-secondary)" fontSize="14">{calendar.length}</text>
         </svg>
         <Text type="supporting">Daily scale: {money(0)}–{money(maxDay)}. Days without entries are zero.</Text>
-        <Button label={showDays ? "Hide daily data" : "Show daily data"} variant="ghost" onClick={() => setShowDays(!showDays)} aria-expanded={showDays} aria-controls="daily-report-data" />
-        {showDays && <List id="daily-report-data" edge="flush" aria-label="Daily report data">{calendar.map(day =>
-          <ListItem key={day.date} label={day.date} description={`Income ${money(day.income)} · Expenses ${money(day.expenses)} · Net cash flow ${money(day.income - day.expenses)}`} />
-        )}</List>}
       </> : <Text>No entries recorded for this month. Add an income or expense to see daily activity.</Text>}
     </VStack>
   </Grid>;
 }
 
-export function MonthlyExport() {
+export function useMonthlyExport() {
   const { ledger, busy, ready } = useTracker();
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
@@ -78,10 +72,5 @@ export function MonthlyExport() {
       setError(cause instanceof Error ? cause.message : "Export failed. Retry.");
     } finally { setExporting(false); }
   }
-  return <VStack gap={2}>
-    <Button label={ledger ? `Export ${ledger.month} CSV` : "Export month CSV"} onClick={() => void download()}
-      isLoading={exporting} isDisabled={!ready || !ledger || busy || exporting} variant="secondary" />
-    <Text type="supporting">All confirmed records for the displayed month, in INR. Search filters do not change this export.</Text>
-    {error && <Text as="p" role="alert">{error}</Text>}
-  </VStack>;
+  return { ledger, busy, ready, exporting, error, download };
 }

@@ -96,7 +96,7 @@ Only one clarification is active in the composer at a time. Show “Replying to:
 
 Place the month selector at the top, followed by three summary values: Income, Expenses, and Net cash flow. Explain net cash flow as recorded income minus expenses; do not label it Balance or Savings.
 
-Below the summary, show category spending as a horizontal bar chart and spending over the month as a daily trend. Bars make category amounts easier to compare than a crowded donut. Use Recharts for charts initially, with color and typography bound to Astryx tokens; confirm the library boundary during implementation. Provide a readable list/table equivalent and clear currency units.
+Below the summary, show category spending as a horizontal bar chart and spending over the month as a daily trend. Bars make category amounts easier to compare than a crowded donut. Use Recharts for charts initially, with color and typography bound to Astryx tokens; confirm the library boundary during implementation. Provide clear currency units; the daily trend has no expandable data list.
 
 Finish with five recent transactions and a “View all” link. Month changes update summaries, charts, and recent entries consistently. A month without entries shows a helpful empty state, not a fabricated trend or percentage comparison. Drafts are never counted.
 
@@ -104,7 +104,7 @@ On mobile: stack the summary values compactly, then the category breakdown, tren
 
 ## 4. Transactions
 
-Desktop uses a table with Date, Description, Category, Type, and Amount. Mobile uses a date-grouped list with the amount and direction immediately readable. Filters include month/date range, income/expense, category, and description search. Label search scope clearly.
+Desktop uses a table with Date, Description, Category, Type, and Amount. Mobile uses a date-grouped list with the amount and direction immediately readable. The loaded month remains the main date scope. A compact toolbar combines description search, Filters, separate sorting (Newest first by default), and an Export button. Export downloads all confirmed records for the loaded month in INR, independent of search and filters. Desktop filters open in a popover; mobile uses icon triggers and a bottom sheet. Type/category/date edits are staged until Apply filters; Reset clears the staged selections and Cancel discards them. Removable active-filter controls and conditional Clear all sit below the toolbar. A single result summary above the records shows count, income, expenses, and net cash flow. Filters apply within the loaded month.
 
 Selecting a record opens details with Edit and Delete. Use a focused dialog or details panel appropriate to the viewport; do not assume specific Astryx overlay APIs until inspected. Warn before deletion and return focus to the invoking control. Do not show Undo unless backed by an implemented recovery mechanism.
 
@@ -194,7 +194,7 @@ Modal visual refinement adds a padded body-font title and subtitle, removes dupl
 
 ### Monthly reporting implementation
 
-The existing Overview frame now uses SQL-backed expense-category bars and daily income/expense lines with solid/dashed series. Lightweight native SVG uses theme tokens; no additional chart dependency is required for these two views. Category names/amounts remain text, and Show daily data exposes every calendar day with income, expenses, and net cash flow. Missing days are zero; empty months show explicit empty states. Overview and Transactions provide a month-scoped CSV export, clearly independent of search/type filters. The displayed month remains the last successfully loaded month while edits to the month input are pending.
+The existing Overview frame now uses SQL-backed expense-category bars and daily income/expense lines with solid/dashed series. Lightweight native SVG uses theme tokens; no additional chart dependency is required for these two views. Category names/amounts remain text. The daily trend retains its legend and scale; its expandable daily-data control/list was removed at user request. Missing days are zero; empty months show explicit empty states. Transactions provides a month-scoped CSV export, clearly independent of search/type filters. The displayed month remains the last successfully loaded month while edits to the month input are pending.
 
 ### Transactions UI and shared fields
 

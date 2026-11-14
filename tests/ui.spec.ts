@@ -318,8 +318,7 @@ test("live AI unavailable retry retains text and uses a fresh completed operatio
   await expect(page.getByRole("button",{name:"Add manually",exact:true})).toBeEnabled();
 });
 
-test("monthly reporting reconciles charts, daily data, month switching, and CSV scope", async ({page}) => {
-  const requested: string[]=[];
+test("monthly reporting reconciles charts and month switching without export", async ({page}) => {
   await page.route("**/api/transactions*",async route => {
     const month=new URL(route.request().url()).searchParams.get("month")??"2026-11";
     const empty=month==="2026-12";
@@ -328,24 +327,16 @@ test("monthly reporting reconciles charts, daily data, month switching, and CSV 
       days:[{date:"2026-11-01",income:20000,expenses:2500},{date:"2026-11-15",income:0,expenses:1000}],
     }}});
   });
-  await page.route("**/api/export*",async route => {
-    requested.push(new URL(route.request().url()).searchParams.get("month")!);
-    await route.fulfill({contentType:"text/csv",body:"date,type,category,description,currency,amount\r\n"});
-  });
   await page.goto("/overview/");
   await expect(page.getByRole("img",{name:/Daily income and expenses for 2026-11/})).toBeVisible();
   await expect(page.getByRole("region",{name:"Where it went"})).toContainText("₹25.00");
-  await page.getByRole("button",{name:"Show daily data"}).click();
-  await expect(page.getByRole("list",{name:"Daily report data"})).toContainText("Income ₹200.00");
-  const download=page.waitForEvent("download");
-  await page.getByRole("button",{name:"Export 2026-11 CSV"}).click();
-  expect((await download).suggestedFilename()).toBe("money-tracker-2026-11.csv");
-  expect(requested).toEqual(["2026-11"]);
+  await expect(page.getByRole("button",{name:"Show daily data"})).toHaveCount(0);
+  await expect(page.getByRole("button",{name:/Export/})).toHaveCount(0);
   await page.getByRole("textbox",{name:"Month (YYYY-MM)"}).fill("2026-12");
   await page.getByRole("button",{name:"Load month"}).click();
   await expect(page.getByText("No expenses recorded for this month.",{exact:true})).toBeVisible();
   await expect(page.getByRole("img",{name:/Daily income and expenses/})).not.toBeVisible();
-  await expect(page.getByRole("button",{name:"Export 2026-12 CSV"})).toBeVisible();
+  await expect(page.getByRole("button",{name:/Export/})).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
 });
 
@@ -373,6 +364,11 @@ test("transactions UI filters, loads rows, edits with validation, and confirms d
     }
     await route.fulfill({json:{transactions:rows,month:"2026-11",summary:{income:0,expenses:rows.reduce((n,row)=>n+row.amount_minor,0)}}});
   });
+  let exportedMonth="";
+  await page.route("**/api/export*",async route=>{
+    exportedMonth=new URL(route.request().url()).searchParams.get("month")!;
+    await route.fulfill({contentType:"text/csv",body:"date,type,amount\r\n"});
+  });
   await page.goto("/transactions/");
   await expect(page.getByRole(page.viewportSize()!.width<768?"list":"table",{name:"Transactions",exact:true})).toBeVisible();
   await expect(page.getByText("Showing 20 of 25 matches")).toBeVisible();
@@ -381,13 +377,38 @@ test("transactions UI filters, loads rows, edits with validation, and confirms d
   await expect(page.getByText("Showing 25 of 25 matches")).toBeVisible();
   await page.getByRole("searchbox",{name:"Search descriptions"}).fill("no such entry");
   await expect(page.getByText("No matches in this month.",{exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"Clear filters"}).click();
-  await page.getByRole("button",{name:"Filters and sort",exact:true}).click();
+  const exportButton=page.getByRole("button",{name:"Export",exact:true});
+  const searchBox=await page.getByRole("searchbox",{name:"Search descriptions"}).boundingBox();
+  const exportBox=await exportButton.boundingBox();
+  expect(Math.abs((searchBox!.y+searchBox!.height/2)-(exportBox!.y+exportBox!.height/2))).toBeLessThan(4);
+  expect(exportBox!.x+exportBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  const csvDownload=page.waitForEvent("download");
+  await exportButton.click();
+  expect((await csvDownload).suggestedFilename()).toBe("money-tracker-2026-11.csv");
+  expect(exportedMonth).toBe("2026-11");
+  await page.getByRole("button",{name:"Clear all",exact:true}).click();
+  await page.getByRole("button",{name:"Filters",exact:true}).click();
   await choose(page,"Category","Transport");
+  await page.screenshot({path:info.outputPath("transaction-filters.png")});
+  await expect(page.getByText("Showing 20 of 25 matches")).toBeVisible();
+  await page.getByRole("button",{name:"Apply filters",exact:true}).click();
   await expect(page.getByText("No matches in this month.",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Filters (1)",exact:true}).click();
   await choose(page,"Category","Dining");
-  await choose(page,"Sort entries","Oldest first");
-  await choose(page,"Sort entries","Newest first");
+  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+  await expect(page.getByText("No matches in this month.",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Remove filter: Transport",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Clear all",exact:true})).toHaveCount(0);
+  await page.getByRole("button",{name:"Filters",exact:true}).click();
+  await page.getByRole("textbox",{name:"From date (YYYY-MM-DD)",exact:true}).fill("2026-11-20");
+  await page.getByRole("textbox",{name:"To date (YYYY-MM-DD)",exact:true}).fill("2026-11-01");
+  await expect(page.getByRole("button",{name:"Apply filters",exact:true})).toHaveAttribute("aria-disabled","true");
+  await page.getByRole("button",{name:"Reset",exact:true}).click();
+  await page.getByRole("button",{name:"Apply filters",exact:true}).click();
+  await page.getByRole("button",{name:"Sort transactions",exact:true}).click();
+  await page.getByRole("button",{name:"Oldest first",exact:true}).click();
+  await page.getByRole("button",{name:"Sort transactions",exact:true}).click();
+  await page.getByRole("button",{name:"Newest first",exact:true}).click();
   await page.getByRole("button",{name:"View transaction: Lunch 00",exact:true}).click();
   const dialog=page.getByRole("dialog",{name:"Transaction details",exact:true});
   await expect(dialog).toContainText("Lunch 00");
@@ -412,10 +433,6 @@ test("transactions UI filters, loads rows, edits with validation, and confirms d
   await expect(page.getByRole("dialog")).not.toBeVisible();
   expect(deletes).toBe(1);
   await expect(page.getByRole("button",{name:"View transaction: Updated lunch",exact:true})).not.toBeVisible();
-  await page.getByRole("textbox",{name:"From date (YYYY-MM-DD)"}).fill("2026-11-20");
-  await page.getByRole("textbox",{name:"To date (YYYY-MM-DD)"}).fill("2026-11-01");
-  await expect(page.getByRole("alert").filter({hasText:"end date"})).toBeVisible();
-  await page.getByRole("button",{name:"Clear filters"}).click();
   await page.getByRole("button",{name:"View transaction: Lunch 01",exact:true}).click();
   await page.waitForTimeout(250);
   await page.screenshot({path:info.outputPath("transaction-details.png")});
