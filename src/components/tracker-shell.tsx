@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppShell, useAppShellMobile } from "@astryxdesign/core/AppShell";
 import { Button } from "@astryxdesign/core/Button";
+import { Avatar } from "@astryxdesign/core/Avatar";
 import { Layout, LayoutContent, LayoutFooter } from "@astryxdesign/core/Layout";
 import { Popover } from "@astryxdesign/core/Popover";
 import { SideNav, SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
@@ -54,7 +55,7 @@ function Profile() {
       </VStack>
       <Button label="Sign out" variant="ghost" isDisabled={busy} onClick={() => { setOpen(false); void signOut(); }} />
     </VStack>}>
-    <Button label="Profile" variant="secondary" />
+    <Button label="Profile" aria-label="Profile" variant="secondary" icon={<Avatar src={user?.image ?? undefined} name={user?.name || user?.email} size="sm" tooltip={false} />} />
   </Popover>;
 }
 

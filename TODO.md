@@ -11,7 +11,7 @@ This is the implementation tracker across sessions. The architecture documents d
 | Working product | Deployed account-owned POC: AI/manual confirmation, transaction details/edit/delete, monthly charts/totals and CSV |
 | Backend | Worker + D1 + capped live AI + configured Google OAuth; Google sign-in confirmed by user; full MVP schema remains open |
 | Next task | **UI-07 — onboarding/settings; finish DATA-02 API pagination separately** |
-| Active task | **None — UI-04 / UI-05 and transaction edit/delete APIs deployed** |
+| Active task | **None — UI-08 implemented, verified, and deployed** |
 | External setup needed later | OAuth secrets/callback configured; Google sign-in confirmed; remaining OPS-01 checks cover live cross-browser access/isolation, logout, and runtime usage |
 
 ## How to use this tracker
@@ -50,6 +50,7 @@ Build realistic UI states before connecting the backend. Keep fixture data clear
 - [x] **UI-05 — Transactions view** · Depends on UI-04. Desktop table/mobile list, filters, cursor/load-more UI, details, edit, delete confirmation, export scope, and conflict/loading/empty states. Done when fixture controls work and no destructive action silently succeeds.
 - [x] **UI-06 — Monthly overview** · Depends on UI-01. Income, expenses, net cash flow, category bars, daily trend, recent records, month switcher, and accessible chart alternatives. Done when all fixture totals reconcile and empty months show honest empty states. Add Recharts only when needed and use Matcha tokens.
 - [ ] **UI-07 — Login, onboarding, and settings** · Depends on UI-01. Google sign-in affordance, currency/timezone setup, profile/sign-out, retention explanation, export/account deletion UI. Done when fixture states cover errors/session expiry and destructive actions require confirmation. Currency locking after ledger creation must be explained.
+- [x] **UI-08 — Profile picture and transaction details icon** · Depends on AUTH-01, UI-05. Show the signed-in user's Google profile picture in the shared profile control, with an initials/avatar fallback when the picture is missing or fails to load. Add a clear details icon action to transaction rows on desktop and mobile that opens the existing transaction details view. Done when both controls work across responsive layouts, icon buttons have accessible names and keyboard focus, and the avatar uses the authenticated user's profile data.
 
 ## Phase 2: Cloudflare runtime and identity
 
@@ -144,6 +145,8 @@ Append one row after each implementation session. Link the commit only if one wa
 
 | Task | Outcome and checks | Remaining work / next step | Commit |
 | --- | --- | --- | --- |
+| UI-08 | Added Astryx Avatar using authenticated session image/name, with built-in initials fallback, to the existing Profile button. Replaced desktop/mobile transaction Details text with an accessible info IconButton and tooltip, opening the existing query-linked dialog. Types/lint/static build passed; Astryx zero failures (existing external-font warnings). Nine focused mocked-session Chromium checks passed at 1440/390/320 widths for valid/missing/broken photos, keyboard profile/details activation, dialog navigation, and no horizontal overflow; desktop/mobile screenshots inspected | UI-07 / AUTH-02 next. Deployed `e4e7f93b-029b-4d30-943f-3c0ee8d83890`; live Transactions returns 200 and health confirms D1/AI/auth configuration. Real Google image fetch not independently verified; no push | This commit |
+| UI-08 planning | Added pending Google profile-picture and transaction-details icon work with fallback, responsive, and accessibility acceptance criteria. Documentation-only update; no application changes | Implement UI-08; UI-07 / AUTH-02 remains the recommended next task | Not committed |
 | SETUP-01–04 | Planning and frontend scaffold completed; starter build/lint/types/Astryx/browser checks passed | Start UI-01; all application/backend features remain open | `4b17397`, `a6acd5a` |
 | POC-01 | Dedicated Cloudflare deployment; local/remote D1 isolation/concurrency/totals and live AI extraction/confirmation verified; responsive local browser checks passed | UI-01 next; full MVP tasks and production CPU/cost/retention verification remain open; see deployment record | `4e3da26` |
 | POC-02 | Salary null-description regression and unchanged-text failure retry fixed; unit/type/lint/build/Astryx checks passed; live salary twice then expense and browser retry verified | Deployed version `05fed95b-f94b-4d5f-9f95-fd14ee998f51`; continue UI-01 | `4e3da26` |

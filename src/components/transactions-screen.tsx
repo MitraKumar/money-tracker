@@ -4,6 +4,8 @@ import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppShellMobile } from "@astryxdesign/core/AppShell";
 import { Button } from "@astryxdesign/core/Button";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { Grid } from "@astryxdesign/core/Grid";
 import { HStack } from "@astryxdesign/core/HStack";
 import { List, ListItem } from "@astryxdesign/core/List";
@@ -53,7 +55,7 @@ export function TransactionsScreen() {
   const visible=filtered.slice(0,limit);
   const filteredIncome=filtered.filter(row=>row.type==="income").reduce((n,row)=>n+row.amount_minor,0);
   const filteredExpenses=filtered.filter(row=>row.type==="expense").reduce((n,row)=>n+row.amount_minor,0);
-  const details=(row:Transaction)=><Button label="Details" aria-label={`View transaction: ${row.description}`} variant="ghost" onClick={()=>select(row.id)} />;
+  const details=(row:Transaction)=><IconButton label={`View transaction: ${row.description}`} tooltip="Transaction details" icon={<Icon icon="info" />} variant="ghost" onClick={()=>select(row.id)} />;
   return <>
     <PageHeading eyebrow="YOUR RECORDS" title="Every little entry." description="Find, review, and update your confirmed income and expenses." />
     <ConnectionStatus /><MonthFilter />
