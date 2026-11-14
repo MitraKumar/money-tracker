@@ -15,6 +15,7 @@ import { VStack } from "@astryxdesign/core/VStack";
 import { Text } from "@astryxdesign/core/Text";
 import { Heading } from "@astryxdesign/core/Heading";
 import { useTracker } from "./tracker-provider";
+import { money } from "@/lib/ledger";
 import { LoginScreen } from "./tracker-pages";
 
 const destinations = [
@@ -23,6 +24,23 @@ const destinations = [
   { href: "/transactions", label: "Transactions" },
 ];
 function useCurrentPath() { return usePathname().replace(/\/$/, "") || "/chat"; }
+
+function MonthlyTotals({ compact = false }: { compact?: boolean }) {
+  const { ledger } = useTracker();
+  return <VStack gap={2} aria-label="Monthly confirmed totals">
+    <Text type="supporting">Confirmed entries · {ledger?.month ?? "Loading…"}</Text>
+    <HStack gap={3} wrap="wrap" hAlign="between">
+      {[
+        ["Income", ledger?.summary.income],
+        ["Expenses", ledger?.summary.expenses],
+        ["Net cash flow", ledger ? ledger.summary.income - ledger.summary.expenses : undefined],
+      ].map(([name, value]) => <VStack key={String(name)} gap={0}>
+        <Text type="supporting">{name}</Text>
+        <Text type={compact ? "supporting" : "body"} hasTabularNumbers weight="semibold">{value === undefined ? "—" : money(Number(value))}</Text>
+      </VStack>)}
+    </HStack>
+  </VStack>;
+}
 
 function Profile() {
   const [open, setOpen] = useState(false);
@@ -42,15 +60,17 @@ function Profile() {
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const { isMobile } = useAppShellMobile();
-  const { user, authLoading } = useTracker();
+  const { user, authLoading, reviewMode } = useTracker();
   const current = useCurrentPath();
   return <Layout height="fill" contentWidth="72rem" content={
     <LayoutContent padding={isMobile ? 4 : 8}>
       <VStack gap={6}>{authLoading
         ? <Heading level={1}>Checking your sign-in…</Heading>
-        : !user ? <LoginScreen /> : children}</VStack>
+        : !user && !reviewMode ? <LoginScreen /> : children}</VStack>
     </LayoutContent>
-  } footer={isMobile && user ? <LayoutFooter hasDivider padding={3}>
+  } footer={isMobile && (user || reviewMode) ? <LayoutFooter hasDivider padding={3}>
+    <VStack gap={3}>
+    {current === "/chat" && <MonthlyTotals compact />}
     <HStack as="nav" aria-label="Mobile navigation" gap={1}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       {destinations.map(({ href, label }) => <Button key={href} label={label === "Transactions" ? "Entries (Transactions)" : label} href={href} as={Link}
@@ -58,20 +78,22 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         style={{ paddingInline: "var(--spacing-1)" }}
         aria-current={current === href ? "page" : undefined}>{label === "Transactions" ? "Entries" : label}</Button>)}
     </HStack>
+    </VStack>
   </LayoutFooter> : undefined} />;
 }
 
 export function TrackerShell({ children }: { children: React.ReactNode }) {
   const current = useCurrentPath();
-  const { user } = useTracker();
+  const { user, reviewMode } = useTracker();
   return <AppShell height="fill" variant="wash" contentPadding={0} mobileNav={{ hasToggle: false }}
     topNav={<TopNav label="App header" heading={<VStack gap={0}>
       <Text type="large" weight="bold">Money Tracker</Text><Text type="supporting">Your money, one entry at a time</Text>
     </VStack>} endContent={user ? <Profile /> : undefined} />}
-    sideNav={user ? <SideNav aria-label="Primary navigation" footer={<VStack gap={2} padding={4}>
+    sideNav={user || reviewMode ? <SideNav aria-label="Primary navigation" footer={<VStack gap={2} padding={4}>
+      {current === "/chat" && <MonthlyTotals />}
       <Text type="label">A little clarity, every day.</Text>
       <Text type="supporting">INR · Asia/Kolkata</Text>
-      <Text type="supporting">Signed in with Google</Text>
+      <Text type="supporting">{reviewMode ? "Temporary UI review · no account data" : "Signed in with Google"}</Text>
     </VStack>}>
       <SideNavSection title="Your money">
         {destinations.map(({href,label}) => <SideNavItem key={href} label={label} href={href} as={Link} isSelected={current === href} />)}

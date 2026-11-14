@@ -13,6 +13,7 @@
     "dev:worker": "wrangler dev",
     "db:local": "wrangler d1 migrations apply money-tracker-poc --local",
     "db:remote": "wrangler d1 migrations apply money-tracker-poc --remote",
+    "deploy:review": "NEXT_PUBLIC_UI_REVIEW=true npm run build && wrangler deploy",
     "deploy": "npm run build && wrangler deploy",
     "deploy:dry": "wrangler deploy --dry-run",
     "test:ui": "playwright test"

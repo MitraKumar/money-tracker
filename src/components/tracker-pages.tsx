@@ -62,19 +62,19 @@ export function TransactionsScreen() {
 }
 
 export function SettingsScreen() {
-  const {user,signOut,busy}=useTracker();
+  const {user,signOut,busy,reviewMode}=useTracker();
   return <>
     <PageHeading eyebrow="YOUR SPACE" title="Keep things simple." description="Your account and ledger preferences." />
     <List edge="flush">
       <ListItem label="Currency" description="Your ledger uses one currency." endContent={<Text>INR · Indian rupee</Text>} />
       <ListItem label="Accounting timezone" description="Used to interpret today and yesterday." endContent={<Text>Asia/Kolkata</Text>} />
-      <ListItem label="Access" description="Sign in with the same Google account to access your records on other devices." endContent={<Text>{user?.email}</Text>} />
+      <ListItem label="Access" description="Sign in with the same Google account to access your records on other devices." endContent={<Text>{reviewMode ? "UI review only" : user?.email}</Text>} />
       <ListItem label="Retention" description="Saved transactions belong to your account. Signing out or session expiry does not delete them." />
     </List>
     <VStack gap={3}>
       <Heading level={2} style={bodyHeading}>Before you add anything</Heading>
       <Text as="p" color="secondary">Keep your Google account secure. Exports and account-deletion controls are still being developed; this remains an early pilot.</Text>
-      <HStack wrap="wrap" gap={3}><Button label="Sign out" onClick={()=>void signOut()} isDisabled={busy} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
+      <HStack wrap="wrap" gap={3}><Button label="Sign out" onClick={()=>void signOut()} isDisabled={busy||reviewMode} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
     </VStack>
   </>;
 }

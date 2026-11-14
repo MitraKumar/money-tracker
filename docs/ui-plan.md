@@ -179,3 +179,15 @@ Confirm example save enters a locked saving state. Only Acknowledge example save
 
 
 The chat now uses Astryx's chat-specific primitives throughout: ChatComposerInput (plain-text configuration with tokens/history disabled), ChatSendButton, ChatMessageBubble for user/assistant content and aligned preview containers, and ChatSystemMessage dividers for local dates. ChatLayout, ChatMessageList, ChatMessage, ChatComposer, and Timestamp remain the structural primitives. The input is controlled through its imperative handle for prompt focus and mobile newlines. Send/Enter handlers preserve rejected input instead of using the composer's automatic clear-on-submit path. A visible count and validation block messages above 500 characters. Transaction preview contents continue to use Astryx Card and form components.
+
+### Crit chat layout revision
+
+Chat now uses a single content column. Only confirmed monthly income, expenses, and net cash flow appear in the desktop sidebar or above navigation in the mobile menu bar. The former right panel and its recent-entry list are removed. The transcript scrolls in its own bounded region above an in-flow composer, so tall transaction previews cannot paint over the input. Example history, send-error simulation, and response scenarios include usage explanations.
+
+The follow-up chat cleanup removes the visible example-history, simulated-send-error, and response-scenario controls and their help text. Chat continues to use the default expense fixture until backend integration.
+
+Add manually opens an Astryx form Dialog containing the existing transaction fields, status, and confirmation actions. Values remain on validation or save failure; saving and uncertain outcomes block dismissal. Successful saves close the dialog.
+
+Manual modal follow-up: the backdrop dismisses the idle form, while pending/uncertain saves remain protected. The header and action footer stay outside the independently scrolling field area so Confirm and Cancel remain visible on short/mobile viewports.
+
+Modal visual refinement adds a padded body-font title and subtitle, removes duplicate introductory status copy, pairs Type/Amount and Category/Date on wide screens, and stacks fields on mobile. Footer actions align at the end with Cancel secondary to Confirm.

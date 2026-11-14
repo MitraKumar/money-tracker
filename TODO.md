@@ -11,7 +11,7 @@ This is the implementation tracker across sessions. The architecture documents d
 | Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
 | Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
 | Next task | **UI-04 — reusable manual transaction form; AUTH-01 real sign-in verification remains pending** |
-| Active task | **None — UI-03 and Astryx chat-component follow-up completed** |
+| Active task | **None — modal visual refinements deployed** |
 | External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
 
 ## How to use this tracker
@@ -127,3 +127,15 @@ Append one row after each implementation session. Link the commit only if one wa
 - [Application approach](docs/approach.md)
 - [Cloudflare feasibility](docs/cloudflare-feasibility.md)
 - [Development commands and known setup limitations](README.md)
+
+| Temporary UI review | Added opt-in NEXT_PUBLIC_UI_REVIEW build and deploy:review command; pages use empty ledger and local chat fixtures with no account reads/manual writes. Lint/types/build/Astryx passed (existing font warnings); deployed version 6c58309c-6b58-4261-8254-540abaffeeea. Browser check blocked by missing Playwright Chromium executable | Review with Crit; restore normal authentication gate using npm run deploy. No commit/push | Not committed |
+
+| Crit chat review | Explained example controls/scenarios; removed right panel and redundant chat link; moved monthly totals to desktop sidebar/mobile menu bar; isolated scrolling transcript from composer. Lint/types/static build/Astryx passed (existing font warnings); focused Chromium checks at 1278/388/320 passed with screenshots inspected. Deployed 09e5925a-ef47-4b2e-ad68-f21b8b24a0f0 | Crit approved with all five comments resolved; public review mode remains temporary; UI-04 next | Not committed |
+
+| Chat cleanup | Removed example-history, send-error simulation, and response-scenario controls plus help text. Lint/types/static build/Astryx passed (existing font warnings). Deployed e1978ba3-0f2b-4c93-85b2-98bb74adc5da | UI-04 next; public review mode and default chat fixture remain | Not committed |
+
+| Manual entry modal | Moved existing manual form into Astryx Dialog with title, in-modal status, controlled dismissal, and protected saving/unknown outcomes. Lint/types/build/Astryx passed (existing font warnings); Chromium checks at 1278/388/320 verified opening, value retention after blocked review save, Cancel/Escape, focus return, viewport fit; mobile screenshot inspected. Deployed 0526e9e1-6cfb-48ff-b9e2-d26de911e4bd | UI-04 remains incomplete (reusable form and inline validation still pending); temporary review mode still blocks real saves | Not committed |
+
+| Manual modal follow-up | Enabled backdrop dismissal while idle; preserved pending/unknown save protection. Separated scrolling fields from header/action footer; explicit padding and viewport height prevent clipped buttons. Lint/types/build/Astryx passed (existing font warnings). Chromium checks passed at 1278×798, 388×842, 320×568, and 388×400 for complete action visibility after scrolling and backdrop dismissal after edits; screenshot inspected. Deployed bc83bf98-2ed3-4b54-af17-44dd2d586afd | UI-04 next; temporary review mode remains | Not committed |
+
+| Modal visual refinement | Padded body-font title/subtitle; reduced duplicate copy; responsive two-column fields on desktop and single column on mobile; aligned footer actions. Lint/types/build/Astryx passed (existing font warnings). Four Chromium viewport checks passed, desktop/mobile screenshots inspected. Deployed 2fb1451e-6761-406d-8f85-21f7c35ca4da | UI-04 remains open; temporary review mode remains | Not committed |

@@ -69,3 +69,7 @@ Follow [Google auth setup](docs/google-auth-setup.md). Configure all OAuth secre
 Historical deployment details: [POC deployment](docs/poc-deployment.md). Design references: [UI](docs/ui-plan.md), [database](docs/database-architecture.md), [chat/AI](docs/chat-ai-flow.md).
 
 The installation audit reports seven moderate development-tooling findings through TypeScript ESLint's transitive minimatch dependency. Compatible audit updates did not resolve them; no forced major override was applied. Astryx diagnostics also flag external font loading for manual review. Current auth overhead and quotas still require measurement before promising free production capacity.
+
+### Temporary public UI review
+
+Run `npm run deploy:review` to publish the static pages without a sign-in gate for Crit review. This build uses an empty ledger and local chat examples, skips session/data reads, and prevents manual saves. Worker authentication remains enforced. Run `npm run deploy` to restore normal sign-in gating; the review flag defaults off.

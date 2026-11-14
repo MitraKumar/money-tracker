@@ -28,6 +28,8 @@ async function api<T>(path: string, data?: unknown): Promise<T> {
 export const label = (value: string) => value.replaceAll("-", " ").replace(/^./, (letter) => letter.toUpperCase());
 const blankEntry = (): Entry => ({ type: "expense", amount: "", category: "other-expense", date: localDate(), description: "" });
 
+const reviewMode = process.env.NEXT_PUBLIC_UI_REVIEW === "true";
+
 function useTrackerState() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -53,6 +55,13 @@ function useTrackerState() {
   useEffect(() => {
     let active = true;
     async function connect() {
+    if (reviewMode) {
+      const currentMonth = localDate().slice(0, 7);
+      setLedger({ transactions: [], summary: { income: 0, expenses: 0 }, month: currentMonth });
+      setMonth(currentMonth); setReady(true); setAuthLoading(false);
+      setMessage("UI review mode. Chat examples are available; sign in on the normal build to access saved records.");
+      return;
+    }
       try {
         const session = await api<{ user: AppUser | null; configured: boolean }>("/api/session");
         if (!active) return;
@@ -96,6 +105,10 @@ function useTrackerState() {
     finally { setBusy(false); }
   }
   async function refresh(target = month) {
+    if (reviewMode) {
+      setLedger({ transactions: [], summary: { income: 0, expenses: 0 }, month: target });
+      return;
+    }
     const data = await api<Ledger>(`/api/transactions?month=${encodeURIComponent(target)}`);
     setLedger(data); setMonth(data.month);
   }
@@ -129,6 +142,7 @@ function useTrackerState() {
     setHistoryLoaded(true);
   }
   async function save() {
+    if (reviewMode) { setMessage("Saving requires sign-in on the normal build. No entry was saved."); return; }
     if (!draft) return;
     const valid = entrySchema.safeParse(draft.entry);
     if (!valid.success) { setMessage(valid.error.issues[0].message); return; }
@@ -169,7 +183,7 @@ function useTrackerState() {
     previewAction({type:"cancel",id:activePreview.id});
     setChatError(false);
   }
-  return { previews, previewAction, previewScenario, setPreviewScenario, activePreview, startSeparateEntry, chatLines, chatError, failNextChat, setFailNextChat, historyLoaded, loadChatHistory, user, authLoading, configured, signIn, signOut, ready, busy, text, message, draft, ledger, month, uncertainSave,
+  return { reviewMode, previews, previewAction, previewScenario, setPreviewScenario, activePreview, startSeparateEntry, chatLines, chatError, failNextChat, setFailNextChat, historyLoaded, loadChatHistory, user, authLoading, configured, signIn, signOut, ready, busy, text, message, draft, ledger, month, uncertainSave,
     setMonth, parse, save, edit, startManual, cancelDraft, changeText, changeType, loadMonth };
 }
 
