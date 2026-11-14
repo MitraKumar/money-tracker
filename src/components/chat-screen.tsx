@@ -1,7 +1,10 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type SVGProps } from "react";
 import { ChatComposer, ChatComposerInput, ChatSendButton, ChatMessage, ChatMessageBubble, ChatMessageList, ChatSystemMessage, type ChatComposerInputHandle } from "@astryxdesign/core/Chat";
+import { useAppShellMobile } from "@astryxdesign/core/AppShell";
 import { Timestamp } from "@astryxdesign/core/Timestamp";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
 import { Button } from "@astryxdesign/core/Button";
 import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
 import { Heading } from "@astryxdesign/core/Heading";
@@ -13,8 +16,15 @@ import { TransactionFields } from "./transaction-fields";
 import { useTracker } from "./tracker-provider";
 import { ConnectionStatus, PageHeading } from "./tracker-parts";
 
+function AddEntryIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" {...props}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>;
+}
+
 export function ChatScreen() {
   const {ready,busy,message,text,draft,uncertainSave,parse,save,setEntry,startManual,cancelDraft,changeText,chatLines,chatError,previews,activePreview,startSeparateEntry}=useTracker();
+  const { isMobile } = useAppShellMobile();
   const composing = useRef(false);
   const input = useRef<ChatComposerInputHandle>(null);
   const focusSeparateEntry = useRef(false);
@@ -28,15 +38,16 @@ export function ChatScreen() {
   const entryBlocked = !!activePreview;
   const actionsDisabled=busy||!ready||!!draft||(entryBlocked && activePreview?.status !== "needs-clarification");
   return <>
-    <PageHeading eyebrow="YOUR DAILY CHECK-IN" title="Small entries. A clearer picture." description="Tell us what came in or went out. Review every detail before it becomes a record." />
-    <ConnectionStatus />
-    <VStack gap={8} width="100%">
-      <VStack as="section" gap={5} aria-label="Chat entry">
-        <VStack style={{height:"min(65dvh, 44rem)", minHeight:"22rem", width:"100%"}} gap={0}>
-          <VStack gap={3} style={{height:"100%", minHeight:0}}>
-            <ChatMessageList align="top" style={{flex:"1 1 0%", minHeight:0, overflowY:"auto", overflowX:"hidden"}}>
-              {chatLines.length === 0 ? <VStack gap={3} padding={3}>
-                <Heading level={2} style={{fontFamily:"var(--font-family-body)"}}>What came in or went out?</Heading>
+    {isMobile ? <Text as="h1" type="large" weight="semibold" style={{margin:0,flexShrink:0}}>Add an entry</Text> : <PageHeading eyebrow="YOUR DAILY CHECK-IN" title="Small entries. A clearer picture." description="Tell us what came in or went out. Review every detail before it becomes a record." />}
+    {(!isMobile || !ready) && <ConnectionStatus />}
+    <VStack gap={isMobile ? 3 : 8} width="100%" style={isMobile ? {flex:"1 1 0%",minHeight:0} : undefined}>
+      <VStack as="section" gap={isMobile ? 2 : 5} aria-label="Chat entry" style={isMobile ? {flex:"1 1 0%",minHeight:0} : undefined}>
+        <VStack style={isMobile ? {flex:"1 1 0%",minHeight:0,width:"100%"} : {height:"min(65dvh, 44rem)", minHeight:"22rem", width:"100%"}} gap={0}>
+          <VStack gap={3} style={{height:"100%", minHeight:0,flex:"1 1 0%"}}>
+            <ChatMessageList align={isMobile && !chatLines.length ? "bottom" : "top"} density={isMobile ? "compact" : "balanced"} style={{flex:"1 1 0%", minHeight:0, overflowY:"auto", overflowX:"hidden"}}>
+              {chatLines.length === 0 ? <VStack gap={3} padding={isMobile ? 0 : 3}>
+                {isMobile ? <Text type="supporting">What came in or went out?</Text>
+                  : <Heading level={2} style={{fontFamily:"var(--font-family-body)"}}>What came in or went out?</Heading>}
               </VStack> : [...groups].map(([day, lines]) => <VStack key={day} gap={4} as="section" aria-label={day}>
                 <ChatSystemMessage variant="divider">{day}</ChatSystemMessage>
                 {lines.map(line => <ChatMessage key={line.id} sender={line.sender}>
@@ -60,13 +71,17 @@ export function ChatScreen() {
               </VStack>}
               {activePreview && !["saving","unknown","checking"].includes(activePreview.status) &&
                 <Button label="Start separate entry" onClick={() => {focusSeparateEntry.current=true;startSeparateEntry();}} />}
-              {chatLines.length === 0 && <HStack gap={2} wrap="wrap" aria-label="Entry suggestions">
-                {["Spent ₹120 on lunch", "Received ₹25,000 salary today", "Paid ₹800 for groceries yesterday"].map(example =>
-                  <Button key={example} label={example} size="sm" variant="secondary"
-                    style={{borderRadius:"var(--radius-full)"}} isDisabled={actionsDisabled||entryBlocked}
+              {chatLines.length === 0 && <HStack gap={2} aria-label="Entry suggestions" style={{overflowX:"auto",minWidth:0,paddingBlock:"var(--spacing-1)"}}>
+                {[
+                  {label:"Lunch ₹120",value:"Spent ₹120 on lunch"},
+                  {label:"Salary ₹25,000",value:"Received ₹25,000 salary today"},
+                  {label:"Groceries ₹800",value:"Paid ₹800 for groceries yesterday"},
+                ].map(({label,value:example}) =>
+                  <Button key={example} label={isMobile ? label : example} size="sm" variant="secondary"
+                    style={{borderRadius:"var(--radius-full)",flexShrink:0}} isDisabled={actionsDisabled||entryBlocked}
                     onClick={() => {changeText(example);input.current?.focus();}} />)}
               </HStack>}
-              <ChatComposer value={text} onChange={changeText} onSubmit={() => {void parse();}} isDisabled={actionsDisabled}
+              <ChatComposer density={isMobile ? "compact" : "balanced"} elevation={isMobile ? "none" : "low"} value={text} onChange={changeText} onSubmit={() => {void parse();}} isDisabled={actionsDisabled}
                 input={<ChatComposerInput handleRef={input} label="Expense or income" value={text} onChange={changeText}
                   placeholder="Type an expense or income…" maxRows={4} isDisabled={actionsDisabled}
                   pasteAsToken={false} hasHistory={false} enterKeyHint="enter"
@@ -79,9 +94,12 @@ export function ChatScreen() {
                     if (window.matchMedia("(pointer: coarse)").matches) input.current?.insertText("\n");
                     else void parse();
                   }} />}
-                headerContext={<Text type="supporting">{text.length}/500</Text>}
+                headerContext={!isMobile || text.length >= 450 ? <Text type="supporting">{text.length}/500</Text> : undefined}
                 sendButton={<ChatSendButton onSend={() => {void parse();}} isDisabled={actionsDisabled||!text.trim()||text.length>500} />}
-                footerActions={<Button label="Add manually" onClick={startManual} isDisabled={actionsDisabled||entryBlocked} />}
+                footerActions={isMobile
+                  ? <IconButton label="Add manually" tooltip="Add manually" icon={<Icon icon={AddEntryIcon} />} variant="ghost"
+                      onClick={startManual} isDisabled={actionsDisabled||entryBlocked} />
+                  : <Button label="Add manually" onClick={startManual} isDisabled={actionsDisabled||entryBlocked} />}
                 status={chatError ? {type:"error",message:message} : text.length>500 ? {type:"error",message:"Keep your message within 500 characters before sending."} : undefined} />
             </VStack>
           </VStack>

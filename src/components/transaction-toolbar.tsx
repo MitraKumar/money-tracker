@@ -46,7 +46,7 @@ export function TransactionToolbar({search,onSearch,filters,onFilters,sort,onSor
   const filterLabel = count ? `Filters (${count})` : "Filters";
   return <VStack as="section" aria-label="Transaction filters" gap={3}>
     <HStack gap={2} vAlign="center">
-      <TextInput label="Search descriptions" isLabelHidden startIcon="search" placeholder="Search transactions" type="search"
+      <TextInput label="Search descriptions" isLabelHidden startIcon="search" placeholder="Search" type="search"
         value={search} onChange={onSearch} hasClear isDisabled={disabled} containerStyle={{flex:"1 1 0",minWidth:0}} />
       <Popover label="Filter transactions" isOpen={open} onOpenChange={next=>{if(next)setDraft(filters);setOpen(next);}}
         presentation={isMobile ? "bottom-sheet" : "popover"} alignment="end" width="22rem" padding={4}

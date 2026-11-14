@@ -37,7 +37,7 @@ test("static routes, current destination, mobile navigation, and profile links",
   ]) {
     const response = await page.goto(route);
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: route === "/chat/" && page.viewportSize()!.width < 768 ? "Add an entry" : heading })).toBeVisible();
     await expect(navigation(page)).toBeVisible();
     expect(await navigation(page).locator("a").evaluateAll((links) => links.some((link) =>
       [...link.querySelectorAll("span")].some((node) => getComputedStyle(node).textOverflow === "ellipsis" && node.scrollWidth > node.clientWidth + 1),
@@ -112,7 +112,7 @@ test("chat prompts, multiline and IME input, retry, and grouped fixture history"
   await page.route("**/api/parse", route => {parseCalls++;return route.abort();});
   await page.goto("/chat/");
   const input = page.getByRole("textbox", {name:"Expense or income",exact:true});
-  await page.getByRole("button", {name:"Spent ₹120 on lunch",exact:true}).click();
+  await page.getByRole("button", {name:page.viewportSize()!.width < 768 ? "Lunch ₹120" : "Spent ₹120 on lunch",exact:true}).click();
   await expect(input).toHaveAttribute("contenteditable","true");
   await expect(input).toHaveText("Spent ₹120 on lunch");
   await expect(page.getByText("Money Tracker · example",{exact:true})).toHaveCount(0);
@@ -467,4 +467,40 @@ test("transactions UI retains conflicted edits and safely retries unknown update
   await page.getByRole("button",{name:"Retry same operation",exact:true}).click();
   await expect(page.getByRole("alertdialog")).not.toBeVisible();
   expect(keys.length).toBe(3);expect(keys[1]).toBe(keys[2]);expect(keys[0]).not.toBe(keys[1]);
+});
+
+test("chat composer fits mobile viewport and shorter keyboard viewport", async ({page}, info) => {
+  await page.goto("/chat/");
+  const mobile = page.viewportSize()!.width < 768;
+  const input = page.getByRole("textbox", {name:"Expense or income",exact:true});
+  const prompt = page.getByRole("button", {name:mobile ? "Lunch ₹120" : "Spent ₹120 on lunch",exact:true});
+  await prompt.click();
+  await expect(input).toHaveText("Spent ₹120 on lunch");
+  await expect(input).toBeFocused();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  async function checkFit() {
+    for (const control of [page.locator(".astryx-chat-composer"),input,page.getByRole("button",{name:"Send",exact:true}),navigation(page)]) {
+      const box = await control.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      if (mobile) expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    }
+    const composer = await page.locator(".astryx-chat-composer").boundingBox();
+    const nav = await navigation(page).boundingBox();
+    if (mobile) expect(composer!.y + composer!.height).toBeLessThanOrEqual(nav!.y);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
+  await checkFit();
+  await page.screenshot({path:info.outputPath("chat-responsive.png")});
+  if (mobile) {
+    await page.setViewportSize({width:page.viewportSize()!.width,height:480});
+    await expect(input).toBeVisible();
+    await expect.poll(async()=> {
+      const box=await page.getByRole("button",{name:"Send",exact:true}).boundingBox();
+      return box!.y+box!.height;
+    }).toBeLessThanOrEqual(480);
+    await checkFit();
+    await expect(input).toHaveText("Spent ₹120 on lunch");
+    await page.screenshot({path:info.outputPath("chat-short-viewport.png")});
+  }
 });

@@ -1,7 +1,7 @@
 // Adapted from Astryx's shell-side-nav template: shared rail + Layout content/footer.
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppShell, useAppShellMobile } from "@astryxdesign/core/AppShell";
@@ -65,19 +65,20 @@ function Profile() {
   </Popover>;
 }
 
-function ShellContent({ children }: { children: React.ReactNode }) {
+function ShellContent({ children, availableHeight }: { children: React.ReactNode; availableHeight?: number }) {
   const { isMobile } = useAppShellMobile();
   const { user, authLoading } = useTracker();
   const current = useCurrentPath();
+  const mobileChat = isMobile && current === "/chat" && !!user;
   return <Layout height="fill" contentWidth="72rem" content={
-    <LayoutContent padding={isMobile ? 4 : 8}>
-      <VStack gap={6}>{authLoading
+    <LayoutContent padding={isMobile ? 4 : 8} isScrollable={!mobileChat} style={mobileChat ? {minHeight:0, overflow:"hidden"} : undefined}>
+      <VStack gap={mobileChat ? 3 : 6} style={mobileChat ? {height:"100%",minHeight:0} : undefined}>{authLoading
         ? <Heading level={1}>Checking your sign-in…</Heading>
         : !user ? <LoginScreen /> : children}</VStack>
     </LayoutContent>
   } footer={isMobile && user ? <LayoutFooter hasDivider padding={3}>
     <VStack gap={3}>
-    {current === "/chat" && <MonthlyTotals compact />}
+    {current === "/chat" && !(availableHeight !== undefined && availableHeight < 576) && <MonthlyTotals compact />}
     <HStack as="nav" aria-label="Mobile navigation"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       <Grid columns={4} gap={1} width="100%">
@@ -93,7 +94,25 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 export function TrackerShell({ children }: { children: React.ReactNode }) {
   const current = useCurrentPath();
   const { user } = useTracker();
-  return <AppShell height="fill" variant="wash" contentPadding={0} mobileNav={{ hasToggle: false }}
+  const [viewport, setViewport] = useState<{height:number;top:number} | null>(null);
+  useEffect(() => {
+    const visual = window.visualViewport;
+    const query = window.matchMedia("(max-width: 767px)");
+    function update() {
+      setViewport(current === "/chat" && query.matches && visual && visual.scale === 1
+        ? {height:visual.height, top:visual.offsetTop} : null);
+    }
+    update();
+    visual?.addEventListener("resize", update);
+    visual?.addEventListener("scroll", update);
+    query.addEventListener("change", update);
+    return () => {
+      visual?.removeEventListener("resize", update);
+      visual?.removeEventListener("scroll", update);
+      query.removeEventListener("change", update);
+    };
+  }, [current]);
+  return <AppShell style={viewport && user ? {height:viewport.height, minHeight:0, position:"fixed", top:viewport.top, insetInline:0} : undefined} height="fill" variant="wash" contentPadding={0} mobileNav={{ hasToggle: false }}
     topNav={<TopNav label="App header" heading={<VStack gap={0}>
       <Text type="large" weight="bold">Money Tracker</Text><Text type="supporting">Your money, one entry at a time</Text>
     </VStack>} endContent={user ? <Profile /> : undefined} />}
@@ -109,6 +128,6 @@ export function TrackerShell({ children }: { children: React.ReactNode }) {
         <SideNavItem icon={SettingsIcon} label="Settings" href="/settings" as={Link} isSelected={current === "/settings"} />
       </SideNavSection>
     </SideNav> : undefined}>
-    <ShellContent>{children}</ShellContent>
+    <ShellContent availableHeight={viewport?.height}>{children}</ShellContent>
   </AppShell>;
 }

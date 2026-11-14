@@ -70,7 +70,9 @@ Desktop layout sketch; this is a wireframe, not a final visual mockup:
 
 All amounts above are illustrative. The right panel is secondary and collapses away on mobile; it must never crowd out chat. Label its values as this month's confirmed records.
 
-**Empty chat:** short explanation and three example prompts: “Spent ₹120 on lunch”, “Received ₹25,000 salary today”, and “Paid ₹800 for groceries yesterday”. The prompts appear as small pill buttons in a wrapping row immediately above the composer. Selecting a prompt fills the composer for editing; it does not send automatically.
+**Empty chat:** short explanation and three example prompts: “Spent ₹120 on lunch”, “Received ₹25,000 salary today”, and “Paid ₹800 for groceries yesterday”. The prompts appear as small pill buttons in a horizontally scrolling row immediately above the composer. Mobile labels are “Lunch ₹120”, “Salary ₹25,000”, and “Groceries ₹800”; they fill the complete examples. Selecting a prompt fills the composer for editing; it does not send automatically.
+
+**Mobile layout:** compact “Add an entry” heading, remaining-height transcript with independent scrolling, and a compact bordered composer. The chat shell follows the visual viewport height and offset as the keyboard opens/closes. Short viewports omit the footer totals to preserve input room; navigation remains available. Manual entry uses a ghost plus icon with an accessible label and tooltip on mobile. The character count appears near the limit. Desktop retains its existing heading and composer density.
 
 **Composer:** multiline plain text, Send control with an accessible name, and persistent “Add manually” access. Desktop Enter sends and Shift+Enter inserts a line break; do not send during IME composition. On mobile, keep an explicit Send control. Preserve unsent text when an API request fails.
 
