@@ -5,8 +5,9 @@ import { entrySchema, localDate, money, type Entry, type Transaction } from "@/l
 
 type Ledger = { transactions: Transaction[]; summary: { income: number; expenses: number }; month: string };
 type Draft = { entry: Entry; draftId: string | null };
+export type AppUser = { id: string; name: string; email: string; image?: string | null };
 type Save = { entry: Entry; draftId: string | null; requestId: string };
-class RequestError extends Error {}
+class RequestError extends Error { constructor(message: string, public status: number) { super(message); } }
 async function api<T>(path: string, data?: unknown): Promise<T> {
   const response = await fetch(path, data === undefined ? { cache: "no-store" } : {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
@@ -16,7 +17,7 @@ async function api<T>(path: string, data?: unknown): Promise<T> {
     const message = result.error || "The request could not be completed.";
     // A service failure after a write can have an unknown commit outcome.
     if (response.status >= 500) throw new Error(message);
-    throw new RequestError(message);
+    throw new RequestError(message, response.status);
   }
   return result;
 }
@@ -24,10 +25,13 @@ export const label = (value: string) => value.replaceAll("-", " ").replace(/^./,
 const blankEntry = (): Entry => ({ type: "expense", amount: "", category: "other-expense", date: localDate(), description: "" });
 
 function useTrackerState() {
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [configured, setConfigured] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState("");
-  const [message, setMessage] = useState("Connecting to your demo ledger…");
+  const [message, setMessage] = useState("Checking your sign-in…");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [ledger, setLedger] = useState<Ledger | null>(null);
   const [month, setMonth] = useState("");
@@ -39,17 +43,45 @@ function useTrackerState() {
     let active = true;
     async function connect() {
       try {
-        await api("/api/session", {});
+        const session = await api<{ user: AppUser | null; configured: boolean }>("/api/session");
+        if (!active) return;
+        setConfigured(session.configured); setUser(session.user);
+        if (!session.user) { setMessage("Sign in with Google to access your ledger."); return; }
         const data = await api<Ledger>("/api/transactions");
-        if (active) { setLedger(data); setMonth(data.month); setReady(true); setMessage("Connected. Try an example or add an entry manually."); }
+        if (active) { setLedger(data); setMonth(data.month); setReady(true); setMessage("Connected to your account ledger."); }
       } catch (error) {
         if (active) setMessage(error instanceof Error ? error.message : "Could not connect. Reload to retry.");
-      }
+      } finally { if (active) setAuthLoading(false); }
     }
     void connect();
     return () => { active = false; };
   }, []);
 
+  function handleExpired(error: unknown) {
+    if (error instanceof RequestError && error.status === 401) {
+      setReady(false); setUser(null); setLedger(null);
+    }
+  }
+  async function signIn() {
+    setBusy(true);
+    try {
+      const result = await api<{ url: string }>("/api/auth/sign-in/social", { provider: "google", callbackURL: `${window.location.origin}/chat/` });
+      const destination = new URL(result.url);
+      if (destination.origin !== "https://accounts.google.com") throw new Error("Unexpected sign-in destination.");
+      window.location.assign(destination.href);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Google sign-in could not start."); }
+    finally { setBusy(false); }
+  }
+  async function signOut() {
+    setBusy(true);
+    try {
+      await api("/api/auth/sign-out", {});
+      setReady(false); setUser(null); setLedger(null); setDraft(null); setText(""); setMonth("");
+      saveOperation.current = null; parseOperation.current = null; setUncertainSave(false);
+      setMessage("You have signed out.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not sign out. Please retry."); }
+    finally { setBusy(false); }
+  }
   async function refresh(target = month) {
     const data = await api<Ledger>(`/api/transactions?month=${encodeURIComponent(target)}`);
     setLedger(data); setMonth(data.month);
@@ -66,7 +98,7 @@ function useTrackerState() {
         if (result.status === "unavailable") parseOperation.current = null;
         setMessage(result.message || "Please add more detail or use manual entry. For this demo, resend a complete sentence to clarify.");
       }
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Chat entry failed. Manual entry is available."); }
+    } catch (error) { handleExpired(error); setMessage(error instanceof Error ? error.message : "Chat entry failed. Manual entry is available."); }
     finally { setBusy(false); }
   }
   async function save() {
@@ -82,6 +114,7 @@ function useTrackerState() {
       try { await refresh(result.transaction.date.slice(0, 7)); }
       catch { setMessage("Your entry was saved. Reload the page to refresh your records."); }
     } catch (error) {
+      handleExpired(error);
       if (error instanceof RequestError) { saveOperation.current = null; setUncertainSave(false); setMessage(error.message); }
       else { setUncertainSave(true); setMessage("Save status is unknown. Retry the same save below; it will not create a duplicate."); }
     } finally { setBusy(false); }
@@ -100,10 +133,10 @@ function useTrackerState() {
   }
   async function loadMonth() {
     setBusy(true);
-    try { await refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Could not load this month."); }
+    try { await refresh(); } catch (error) { handleExpired(error); setMessage(error instanceof Error ? error.message : "Could not load this month."); }
     finally { setBusy(false); }
   }
-  return { ready, busy, text, message, draft, ledger, month, uncertainSave,
+  return { user, authLoading, configured, signIn, signOut, ready, busy, text, message, draft, ledger, month, uncertainSave,
     setMonth, parse, save, edit, startManual, cancelDraft, changeText, changeType, loadMonth };
 }
 

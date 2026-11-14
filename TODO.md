@@ -7,11 +7,11 @@ This is the implementation tracker across sessions. The architecture documents d
 | Item | Status |
 | --- | --- |
 | Foundation | Next.js + TypeScript + Astryx Matcha starter implemented |
-| Latest implementation commit | `4e3da26` — POC and AI fixes; UI-01 changes are not committed yet |
+| Latest implementation commit | `935f5b8` — UI shell; Google authentication changes are not committed yet |
 | Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
 | Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
-| Next task | **UI-02: Chat composition and history** |
-| Active task | None |
+| Next task | **AUTH-01: configure Google OAuth, deploy, and verify real sign-in** |
+| Active task | **AUTH-01 — deployed/configured; real Google sign-in verification pending** |
 | External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
 
 ## How to use this tracker
@@ -59,6 +59,17 @@ Build realistic UI states before connecting the backend. Keep fixture data clear
 - [ ] **AUTH-02 — Profiles and onboarding API** · Depends on AUTH-01, UI-07. Create/read/update profiles and connect login/setup/settings. Done when first visits require setup, returning users resume Chat, INR/timezone defaults are explicit, and profile changes cannot rewrite ledger history or change currency after records exist.
 - [ ] **OPS-01 — Cloudflare deployment proof** · Depends on AUTH-01, API-01. Deploy a development environment, test callback URLs plus authenticated D1 read/write, and measure CPU on session and API requests. Done when remote behavior is verified and results recorded. This task needs account configuration; a local build alone does not complete it. Confirm free-plan fit using measured limits before relying on it.
 
+### AUTH-01 handoff
+
+- [x] Better Auth Google provider, encrypted OAuth token storage, request-scoped native D1 adapter, and generated auth schema.
+- [x] Additive account-owned ledger schema and user-scoped queries; old anonymous cookies/session creation rejected; sign-out/expiry do not delete account records.
+- [x] Google sign-in/sign-out UI, private-view gating, account profile, and removal of browser-demo access controls/copy.
+- [x] Local D1 migrations, signed-session integration checks, anonymous runtime smoke checks, type/lint/static build/Astryx/deployment dry run, and 15 responsive UI checks with mocked account boundaries.
+- [x] Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `BETTER_AUTH_SECRET` as Worker secrets, plus Google's exact callback URL. See [setup instructions](docs/google-auth-setup.md).
+- [ ] Apply additive migrations remotely, deploy, and verify real Google consent/callback, same-user cross-browser access, different-user isolation, logout, and runtime CPU.
+
+AUTH-01 remains unchecked above because real Google login and deployment verification are pending. The user has deployed the Google-authenticated version to Cloudflare. Live checks confirm configured secrets, D1 health, rejected anonymous access, and Google authorization with the expected callback/state. No anonymous records were deleted or silently assigned to a Google account.
+
 ## Phase 3: Reliable manual ledger
 
 - [ ] **DATA-01 — Shared validation and owned data access** · Depends on DB-01, AUTH-01. Add Zod contracts, exact decimal-to-paise conversion, safe bounds, calendar/timezone handling, and user-scoped queries. Done when unit/integration checks cover decimals, invalid dates, ownership, and safe numeric bounds. Never accept a user ID from model output or a request body as authorization.
@@ -98,7 +109,9 @@ Append one row after each implementation session. Link the commit only if one wa
 | POC-01 | Dedicated Cloudflare deployment; local/remote D1 isolation/concurrency/totals and live AI extraction/confirmation verified; responsive local browser checks passed | UI-01 next; full MVP tasks and production CPU/cost/retention verification remain open; see deployment record | `4e3da26` |
 | POC-02 | Salary null-description regression and unchanged-text failure retry fixed; unit/type/lint/build/Astryx checks passed; live salary twice then expense and browser retry verified | Deployed version `05fed95b-f94b-4d5f-9f95-fd14ee998f51`; continue UI-01 | `4e3da26` |
 
-| UI-01 | Static routes and shared Astryx shell, desktop/sidebar and mobile navigation, profile dialog, route-preserved draft state, real summary/transaction views, search/type filters; unit/lint/type/build/Astryx/local API checks passed; 6 browser scenarios across 1440/390/320 widths passed locally and on the live deployment | Continue UI-02; deployed version `653d5712-cb5f-4b3d-8a51-c96ee07dc392`; full transcript, charts, full record actions, and Google account support remain incomplete | Not committed |
+| UI-01 | Static routes and shared Astryx shell, desktop/sidebar and mobile navigation, profile dialog, route-preserved draft state, real summary/transaction views, search/type filters; unit/lint/type/build/Astryx/local API checks passed; 6 browser scenarios across 1440/390/320 widths passed locally and on the live deployment | Continue UI-02; deployed version `653d5712-cb5f-4b3d-8a51-c96ee07dc392`; full transcript, charts, full record actions, and Google account support remain incomplete | `935f5b8` |
+
+| AUTH-01 (partial) | Google auth and account-ledger implementation prepared; local migrations, signed-session/isolation tests, static checks and 15 fixture-based UI checks passed | User deployed/configured Cloudflare; live API protection and Google OAuth initiation verified; real Google token exchange remains unverified | Not committed |
 
 ## References
 

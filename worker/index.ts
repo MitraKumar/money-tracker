@@ -1,7 +1,8 @@
+import { authConfigured, createAuth, type AuthEnv } from "./auth";
 import { z } from "zod";
 import { entrySchema, localDate, modelResultSchema, organizeModelResult, requestIdSchema, toMinorUnits } from "../src/lib/ledger";
 
-interface Env {
+interface Env extends AuthEnv {
   DB: D1Database;
   AI: Ai;
   ASSETS: Fetcher;
@@ -31,14 +32,6 @@ async function body(request: Request): Promise<unknown> {
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
   try { return JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new ApiError(400, "Invalid JSON."); }
 }
-async function session(request: Request, env: Env) {
-  const token = request.headers.get("cookie")?.match(/(?:^|;\s*)mt_poc=([a-f0-9]{64})(?:;|$)/)?.[1];
-  if (!token) return null;
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  const id = [...new Uint8Array(bytes)].map((n) => n.toString(16).padStart(2, "0")).join("");
-  const exists = await env.DB.prepare("SELECT id FROM poc_sessions WHERE id=? AND expires_at>?").bind(id, Date.now()).first();
-  return exists ? id : null;
-}
 function record(row: TransactionRow) { return { ...JSON.parse(row.payload), id: row.id, amount_minor: row.amount_minor, created_at: row.created_at }; }
 
 async function withTimeout<T>(work: Promise<T>): Promise<T> {
@@ -52,40 +45,42 @@ async function withTimeout<T>(work: Promise<T>): Promise<T> {
 
 async function api(request: Request, env: Env) {
   const url = new URL(request.url);
+  if (url.pathname.startsWith("/api/auth/")) {
+    if (!authConfigured(env)) return json({ error: "Google sign-in is not configured yet." }, 503);
+    return createAuth(env).handler(request);
+  }
   if (request.method !== "GET") {
     if (request.headers.get("origin") !== url.origin) throw new ApiError(403, "Use this app's own page to make changes.");
   }
   if (url.pathname === "/api/health" && request.method === "GET") {
-    await env.DB.prepare("SELECT 1 FROM poc_sessions LIMIT 1").all();
-    return json({ ok: true, database: "connected", ai: env.AI_ENABLED === "true" ? "enabled" : "disabled", mode: "browser-isolated-poc" });
+    await env.DB.prepare("SELECT 1 FROM ledger_transactions LIMIT 1").all();
+    return json({ ok: true, database: "connected", ai: env.AI_ENABLED === "true" ? "enabled" : "disabled", mode: "google-account", authConfigured: authConfigured(env) });
   }
-  const owner = await session(request, env);
-  if (url.pathname === "/api/session" && request.method === "POST") {
-    if (owner) return json({ ok: true });
-    const token = [...crypto.getRandomValues(new Uint8Array(32))].map((n) => n.toString(16).padStart(2, "0")).join("");
-    const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-    const id = [...new Uint8Array(bytes)].map((n) => n.toString(16).padStart(2, "0")).join("");
-    const inserted = await env.DB.prepare("INSERT INTO poc_sessions(id,expires_at) SELECT ?,? WHERE (SELECT COUNT(*) FROM poc_sessions)<2000 RETURNING id")
-      .bind(id, Date.now() + 7 * 86400000).first();
-    if (!inserted) throw new ApiError(429, "Demo capacity reached. Please try later.");
-    const secure = url.protocol === "https:" ? "; Secure" : "";
-    return json({ ok: true }, 201, { "Set-Cookie": `mt_poc=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800${secure}` });
+  if (url.pathname === "/api/session" && request.method === "POST") throw new ApiError(410, "Browser demo sessions have been removed. Sign in with Google.");
+  const auth = authConfigured(env) ? createAuth(env) : null;
+  const session = auth ? await auth.api.getSession({ headers: request.headers, returnHeaders: true }) : null;
+  if (url.pathname === "/api/session" && request.method === "GET") {
+    const user = session?.response?.user;
+    const response = json({ configured: !!auth, user: user ? { id: user.id, name: user.name, email: user.email, image: user.image } : null });
+    for (const cookie of session?.headers.getSetCookie() ?? []) response.headers.append("Set-Cookie", cookie);
+    return response;
   }
-  if (!owner) throw new ApiError(401, "Your demo session expired. Reload to start a new demo ledger.");
+  const owner = session?.response?.user.id;
+  if (!owner) throw new ApiError(401, "Sign in with Google to access your ledger.");
 
   if (url.pathname === "/api/transactions" && request.method === "GET") {
     const month = url.searchParams.get("month") ?? localDate().slice(0, 7);
     if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month)) throw new ApiError(400, "Invalid month.");
-    const { results } = await env.DB.prepare("SELECT * FROM poc_transactions WHERE session_id=? AND date>=? AND date<? ORDER BY date DESC, created_at DESC, id DESC LIMIT 100")
+    const { results } = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND date>=? AND date<? ORDER BY date DESC, created_at DESC, id DESC LIMIT 100")
       .bind(owner, `${month}-01`, `${month}-32`).all<TransactionRow>();
-    const summary = await env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END),0) income, COALESCE(SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END),0) expenses FROM poc_transactions WHERE session_id=? AND date>=? AND date<?")
+    const summary = await env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount_minor ELSE 0 END),0) income, COALESCE(SUM(CASE WHEN type='expense' THEN amount_minor ELSE 0 END),0) expenses FROM ledger_transactions WHERE user_id=? AND date>=? AND date<?")
       .bind(owner, `${month}-01`, `${month}-32`).first();
     return json({ transactions: results.map(record), summary, month });
   }
 
   if (url.pathname === "/api/parse" && request.method === "POST") {
     const input = z.object({ text: z.string().trim().min(1).max(500), requestId: requestIdSchema }).strict().parse(await body(request));
-    const previous = await env.DB.prepare("SELECT id,input,result FROM poc_parses WHERE session_id=? AND request_id=?").bind(owner, input.requestId).first<ParseRow>();
+    const previous = await env.DB.prepare("SELECT id,input,result FROM ledger_parses WHERE user_id=? AND request_id=?").bind(owner, input.requestId).first<ParseRow>();
     if (previous) {
       if (previous.input !== input.text) throw new ApiError(409, "This request ID already belongs to a different message.");
       if (!previous.result) throw new ApiError(409, "This entry is still processing or was interrupted. Use manual entry or retry with a new message.");
@@ -94,11 +89,11 @@ async function api(request: Request, env: Env) {
     if (env.AI_ENABLED !== "true") throw new ApiError(503, "Chat entry is unavailable. Please use manual entry.");
     const id = crypto.randomUUID();
     // One atomic INSERT reserves quota and deduplicates concurrent requests across isolates.
-    const reserved = await env.DB.prepare(`INSERT OR IGNORE INTO poc_parses(id,session_id,request_id,day,input,created_at)
-      SELECT ?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM poc_parses WHERE day=?)<50
-      AND (SELECT COUNT(*) FROM poc_parses WHERE day=? AND session_id=?)<10 RETURNING id`)
+    const reserved = await env.DB.prepare(`INSERT OR IGNORE INTO ledger_parses(id,user_id,request_id,day,input,created_at)
+      SELECT ?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM ledger_parses WHERE day=?)<50
+      AND (SELECT COUNT(*) FROM ledger_parses WHERE day=? AND user_id=?)<10 RETURNING id`)
       .bind(id, owner, input.requestId, new Date().toISOString().slice(0, 10), input.text, Date.now(), new Date().toISOString().slice(0, 10), new Date().toISOString().slice(0, 10), owner).first();
-    if (!reserved) throw new ApiError(429, "Demo chat limit reached or request already processing. Manual entry is still available.");
+    if (!reserved) throw new ApiError(429, "App chat limit reached or request already processing. Manual entry is still available.");
     let result: unknown;
     let stage = "inference";
     const started = Date.now();
@@ -130,32 +125,32 @@ async function api(request: Request, env: Env) {
         ? "Chat entry took too long. Please retry or enter the details manually."
         : "Chat entry could not be completed. Please retry or enter the details manually." };
     }
-    await env.DB.prepare("UPDATE poc_parses SET result=? WHERE id=? AND session_id=?").bind(JSON.stringify(result), id, owner).run();
+    await env.DB.prepare("UPDATE ledger_parses SET result=? WHERE id=? AND user_id=?").bind(JSON.stringify(result), id, owner).run();
     return json({ ...(result as object), draftId: id });
   }
 
   if (url.pathname === "/api/transactions" && request.method === "POST") {
     const input = z.object({ requestId: requestIdSchema, draftId: requestIdSchema.nullable(), entry: entrySchema }).strict().parse(await body(request));
     const payload = JSON.stringify(input.entry);
-    const previous = await env.DB.prepare("SELECT * FROM poc_transactions WHERE session_id=? AND (request_id=? OR (? IS NOT NULL AND source_parse_id=?))")
+    const previous = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND (request_id=? OR (? IS NOT NULL AND source_parse_id=?))")
       .bind(owner, input.requestId, input.draftId, input.draftId).first<TransactionRow>();
     if (previous) {
       if (previous.payload !== payload) throw new ApiError(409, "This save already completed with different details. Reload your records.");
       return json({ transaction: record(previous), replayed: true });
     }
     if (input.draftId) {
-      const draft = await env.DB.prepare("SELECT result FROM poc_parses WHERE id=? AND session_id=?").bind(input.draftId, owner).first<{ result: string | null }>();
-      if (!draft?.result || JSON.parse(draft.result).status !== "candidate") throw new ApiError(400, "No reviewable draft found in this browser session.");
+      const draft = await env.DB.prepare("SELECT result FROM ledger_parses WHERE id=? AND user_id=?").bind(input.draftId, owner).first<{ result: string | null }>();
+      if (!draft?.result || JSON.parse(draft.result).status !== "candidate") throw new ApiError(400, "No reviewable draft found in this account.");
     }
     const id = crypto.randomUUID();
-    const saved = await env.DB.prepare(`INSERT OR IGNORE INTO poc_transactions(id,session_id,request_id,source_parse_id,type,amount_minor,date,category,description,payload,created_at)
-      SELECT ?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM poc_transactions WHERE session_id=?)<100
-      AND (SELECT COUNT(*) FROM poc_transactions)<5000 RETURNING *`)
+    const saved = await env.DB.prepare(`INSERT OR IGNORE INTO ledger_transactions(id,user_id,request_id,source_parse_id,type,amount_minor,date,category,description,payload,created_at)
+      SELECT ?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM ledger_transactions WHERE user_id=?)<100
+      AND (SELECT COUNT(*) FROM ledger_transactions)<5000 RETURNING *`)
       .bind(id, owner, input.requestId, input.draftId, input.entry.type, toMinorUnits(input.entry.amount), input.entry.date, input.entry.category, input.entry.description, payload, Date.now(), owner).first<TransactionRow>();
     if (!saved) {
-      const replay = await env.DB.prepare("SELECT * FROM poc_transactions WHERE session_id=? AND (request_id=? OR source_parse_id=?)").bind(owner, input.requestId, input.draftId).first<TransactionRow>();
+      const replay = await env.DB.prepare("SELECT * FROM ledger_transactions WHERE user_id=? AND (request_id=? OR source_parse_id=?)").bind(owner, input.requestId, input.draftId).first<TransactionRow>();
       if (replay?.payload === payload) return json({ transaction: record(replay), replayed: true });
-      throw new ApiError(409, "Demo capacity reached or this entry was already saved. Refresh your records.");
+      throw new ApiError(409, "App capacity reached or this entry was already saved. Refresh your records.");
     }
     return json({ transaction: record(saved) }, 201);
   }
@@ -169,7 +164,7 @@ export default {
     catch (error) {
       if (error instanceof z.ZodError) return json({ error: error.issues[0]?.message ?? "Invalid entry." }, 400);
       if (error instanceof ApiError) return json({ error: error.message }, error.status);
-      return json({ error: "The demo service could not complete this request. Please try again." }, 503);
+      return json({ error: "The service could not complete this request. Please try again." }, 503);
     }
   },
   async scheduled(_event: ScheduledController, env: Env) {

@@ -1,5 +1,25 @@
 import { expect, test, type Page } from "@playwright/test";
 
+// UI scenarios use a mocked account/API boundary. Real signed-session and
+// cross-account authorization are covered by auth.test.mjs against the Worker.
+test.beforeEach(async ({ page }) => {
+  let signedIn = true;
+  const rows: Record<string, unknown>[] = [];
+  await page.route("**/api/session", route => route.fulfill({json:{configured:true,user:signedIn?{id:"ui-user",name:"UI User",email:"ui@example.test"}:null}}));
+  await page.route("**/api/auth/sign-out", route => {signedIn=false;return route.fulfill({json:{success:true}});});
+  await page.route("**/api/transactions*", async route => {
+    if(route.request().method()==="POST") {
+      const {entry}=route.request().postDataJSON();
+      const transaction={...entry,id:String(rows.length+1),amount_minor:Math.round(Number(entry.amount)*100),created_at:Date.now()};
+      rows.push(transaction);await route.fulfill({status:201,json:{transaction}});return;
+    }
+    await route.fulfill({json:{transactions:rows,month:"2026-11",summary:{
+      income:rows.filter(row=>row.type==="income").reduce((total,row)=>total+Number(row.amount_minor),0),
+      expenses:rows.filter(row=>row.type==="expense").reduce((total,row)=>total+Number(row.amount_minor),0),
+    }}});
+  });
+});
+
 function navigation(page: Page) {
   return page.getByRole("navigation", { name: page.viewportSize()!.width < 768 ? "Mobile navigation" : "Primary navigation", exact: true });
 }
@@ -28,7 +48,7 @@ test("static routes, current destination, mobile navigation, and profile links",
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   }
   await page.getByRole("button", { name: "Profile", exact: true }).click();
-  const profile = page.getByRole("dialog", { name: "Your demo profile" });
+  const profile = page.getByRole("dialog", { name: "Your profile" });
   await expect(profile).toBeVisible();
   await profile.getByRole("link", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Keep things simple." })).toBeVisible();
@@ -60,4 +80,29 @@ test("unsaved draft survives navigation and saved entries reconcile across views
   await navigation(page).getByRole("link", { name: "Overview", exact: true }).click();
   await expect(page.getByText("−₹17.50", { exact: true }).first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+});
+
+
+test("signed-out visitors see Google login instead of a private ledger", async ({ page }) => {
+  await page.route("**/api/session", route=>route.fulfill({json:{configured:true,user:null}}));
+  await page.goto("/transactions/");
+  await expect(page.getByRole("button",{name:"Continue with Google",exact:true})).toBeEnabled();
+  await expect(page.getByRole("heading",{name:"Every little entry."})).toHaveCount(0);
+  await expect(page.getByRole("button",{name:"Profile",exact:true})).toHaveCount(0);
+});
+
+test("sign out clears displayed account data and gates protected routes", async ({ page }) => {
+  await page.goto("/chat/");
+  await page.getByRole("button",{name:"Profile",exact:true}).click();
+  await page.getByRole("button",{name:"Sign out",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Continue with Google",exact:true})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Small entries. A clearer picture."})).toHaveCount(0);
+});
+
+test("missing OAuth configuration disables sign in and offers no browser-demo bypass", async ({ page }) => {
+  await page.route("**/api/session", route=>route.fulfill({json:{configured:false,user:null}}));
+  await page.goto("/login/");
+  await expect(page.getByRole("button",{name:"Continue with Google",exact:true})).toBeDisabled();
+  await expect(page.getByText("Google sign-in setup is pending.",{exact:false})).toBeVisible();
+  await expect(page.getByRole("link",{name:/browser demo/})).toHaveCount(0);
 });

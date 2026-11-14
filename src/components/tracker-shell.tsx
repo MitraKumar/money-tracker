@@ -13,6 +13,9 @@ import { TopNav } from "@astryxdesign/core/TopNav";
 import { HStack } from "@astryxdesign/core/HStack";
 import { VStack } from "@astryxdesign/core/VStack";
 import { Text } from "@astryxdesign/core/Text";
+import { Heading } from "@astryxdesign/core/Heading";
+import { useTracker } from "./tracker-provider";
+import { LoginScreen } from "./tracker-pages";
 
 const destinations = [
   { href: "/chat", label: "Chat" },
@@ -23,14 +26,15 @@ function useCurrentPath() { return usePathname().replace(/\/$/, "") || "/chat"; 
 
 function Profile() {
   const [open, setOpen] = useState(false);
-  return <Popover label="Your demo profile" isOpen={open} onOpenChange={setOpen} alignment="end" presentation="adaptive"
+  const { user, signOut, busy } = useTracker();
+  return <Popover label="Your profile" isOpen={open} onOpenChange={setOpen} alignment="end" presentation="adaptive"
     content={<VStack gap={4}>
-      <Text weight="semibold">Your demo space</Text>
-      <Text type="supporting">Private to this browser. No Google account connected.</Text>
+      <Text weight="semibold">{user?.name}</Text>
+      <Text type="supporting">{user?.email}</Text>
       <VStack as="nav" aria-label="Profile navigation" gap={2}>
         <Button label="Settings" href="/settings" as={Link} onClick={() => setOpen(false)} />
-        <Button label="Account options" href="/login" as={Link} onClick={() => setOpen(false)} variant="ghost" />
       </VStack>
+      <Button label="Sign out" variant="ghost" isDisabled={busy} onClick={() => { setOpen(false); void signOut(); }} />
     </VStack>}>
     <Button label="Profile" variant="secondary" />
   </Popover>;
@@ -38,12 +42,15 @@ function Profile() {
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const { isMobile } = useAppShellMobile();
+  const { user, authLoading } = useTracker();
   const current = useCurrentPath();
   return <Layout height="fill" contentWidth="72rem" content={
     <LayoutContent padding={isMobile ? 4 : 8}>
-      <VStack gap={6}>{children}</VStack>
+      <VStack gap={6}>{authLoading
+        ? <Heading level={1}>Checking your sign-in…</Heading>
+        : !user ? <LoginScreen /> : children}</VStack>
     </LayoutContent>
-  } footer={isMobile ? <LayoutFooter hasDivider padding={3}>
+  } footer={isMobile && user ? <LayoutFooter hasDivider padding={3}>
     <HStack as="nav" aria-label="Mobile navigation" gap={1}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       {destinations.map(({ href, label }) => <Button key={href} label={label === "Transactions" ? "Entries (Transactions)" : label} href={href} as={Link}
@@ -56,14 +63,15 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 
 export function TrackerShell({ children }: { children: React.ReactNode }) {
   const current = useCurrentPath();
+  const { user } = useTracker();
   return <AppShell height="fill" variant="wash" contentPadding={0} mobileNav={{ hasToggle: false }}
     topNav={<TopNav label="App header" heading={<VStack gap={0}>
-      <Text type="large" weight="bold">Money Tracker</Text><Text type="supporting">Browser demo · Test data only</Text>
-    </VStack>} endContent={<Profile />} />}
-    sideNav={<SideNav aria-label="Primary navigation" footer={<VStack gap={2} padding={4}>
+      <Text type="large" weight="bold">Money Tracker</Text><Text type="supporting">Your money, one entry at a time</Text>
+    </VStack>} endContent={user ? <Profile /> : undefined} />}
+    sideNav={user ? <SideNav aria-label="Primary navigation" footer={<VStack gap={2} padding={4}>
       <Text type="label">A little clarity, every day.</Text>
       <Text type="supporting">INR · Asia/Kolkata</Text>
-      <Text type="supporting">Browser demo · Test data only</Text>
+      <Text type="supporting">Signed in with Google</Text>
     </VStack>}>
       <SideNavSection title="Your money">
         {destinations.map(({href,label}) => <SideNavItem key={href} label={label} href={href} as={Link} isSelected={current === href} />)}
@@ -71,7 +79,7 @@ export function TrackerShell({ children }: { children: React.ReactNode }) {
       <SideNavSection title="Your space">
         <SideNavItem label="Settings" href="/settings" as={Link} isSelected={current === "/settings"} />
       </SideNavSection>
-    </SideNav>}>
+    </SideNav> : undefined}>
     <ShellContent>{children}</ShellContent>
   </AppShell>;
 }

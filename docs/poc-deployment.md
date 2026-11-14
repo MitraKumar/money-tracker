@@ -1,5 +1,7 @@
 # Cloudflare proof of concept
 
+Current source includes a Google-authenticated replacement pending live OAuth configuration. The deployed browser demo below remains unchanged until credentials are ready. See [Google auth setup](google-auth-setup.md).
+
 Live URL: https://money-tracker-poc.kaushik0976.workers.dev
 
 Deployed 14 November 2026. Initial deployment version: `70fcd724-b317-4ea1-82d2-f964d836dfe4`.

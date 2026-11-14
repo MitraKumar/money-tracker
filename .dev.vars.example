@@ -1,2 +1,8 @@
 # Optional local override: avoid live AI requests while developing the manual flow.
 AI_ENABLED=false
+BETTER_AUTH_URL=http://localhost:8787
+# Generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=
+# A Google OAuth Web application client, stored only in this ignored file locally.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

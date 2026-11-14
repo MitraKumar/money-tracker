@@ -19,7 +19,7 @@ export function PageHeading({ eyebrow, title, description }: { eyebrow: string; 
 export function ConnectionStatus() {
   const { message, ready } = useTracker();
   return <VStack gap={2}><Text as="p" role="status" aria-live="polite">{message}</Text>
-    {!ready && <Text type="supporting">If connection fails, reload to retry. The full local app runs through Wrangler.</Text>}
+    {!ready && <Text type="supporting">If connection fails, reload to retry or sign in again.</Text>}
   </VStack>;
 }
 export function Summary() {

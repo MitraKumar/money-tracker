@@ -1,73 +1,71 @@
 # Money Tracker
 
-Start with [TODO.md](TODO.md) for task IDs, dependencies, acceptance criteria, and the handoff between sessions.
+Start with [TODO.md](TODO.md) for task IDs, dependencies, acceptance criteria, and session handoffs.
 
-Next.js App Router + TypeScript and Astryx Matcha, deployed as a browser-isolated Cloudflare proof of concept with Workers API, D1, and Workers AI.
+Next.js App Router + TypeScript + Astryx Matcha, with a same-origin Cloudflare Worker API, D1, and Workers AI. The new authentication implementation uses Better Auth and Google sign-in, with account-owned ledgers shared across devices and private to each user.
 
-Live demo: https://money-tracker-poc.kaushik0976.workers.dev — use test data only. See [POC deployment](docs/poc-deployment.md) for architecture, limits, verification, and deployment commands.
+**Google authentication is deployed and configured** at https://money-tracker-poc.kaushik0976.workers.dev. Live health, anonymous-access rejection, and Google authorization initiation have been verified. Completing a real Google consent/callback flow is still pending user verification. See [Google auth setup](docs/google-auth-setup.md) for exact callback URLs, secret commands, and launch verification. Changes do not automatically attach anonymous test data to a Google account.
 
 ## Development
 
-Use Node.js 24 LTS and npm. From the repository root:
+Use Node.js 24 LTS and npm:
 
 ```sh
 npm ci
-npm run dev
+npm run db:local
+npm run build
+npm run dev:worker -- --var AI_ENABLED:false
 ```
 
-Open http://localhost:3000 for frontend development. The demo needs the Worker APIs for session setup, parsing, and persistence; this command alone does not provide them.
+Open http://localhost:8787. Without OAuth credentials, the app shows the sign-in setup-pending state and private APIs reject anonymous requests. Configure ignored `.dev.vars` from `.dev.vars.example` to use real Google sign-in locally. Do not commit or share secrets.
 
-For the full local demo, run `npm run db:local`, `npm run build`, then `npm run dev:worker -- --var AI_ENABLED:false`. Open the Wrangler URL (normally http://localhost:8787). AI is disabled in this example; manual entries use local D1. AI calls, if enabled, use remote Cloudflare resources. Rebuild the frontend after UI edits.
+`npm run dev` previews the frontend on port 3000 but does not supply Worker APIs or OAuth callbacks. Rebuild `out/` after frontend edits when testing through Wrangler. AI bindings invoke Cloudflare remotely when enabled, even in local development.
 
-## Checks and production build
+## Checks
 
 ```sh
-npm run test
+npm test
 npm run lint
 npm run typecheck
 npm run build
 npm run ui:check
+npm run deploy:dry
 ```
 
-The static build is written to `out/`. `next start` does not serve static exports. To preview it locally, run `python3 -m http.server 3000 --directory out`.
+The static build is in `out/`. Type checking first generates Next.js route declarations, then checks frontend and Worker code.
 
-The type-check command generates Next.js route declarations first, so it works on a fresh checkout before a production build.
+`npm test` includes actual Better Auth signed-session integration checks with a local SQLite-backed D1 adapter, plus money/date/extraction tests. Tests create only synthetic identities and do not bypass production authentication or perform a real Google token exchange.
 
-## UI routes and browser checks
-
-The shared application shell now provides `/chat/`, `/overview/`, `/transactions/`, `/settings/`, `/login/`, and `/setup/`. `/` remains a Chat alias. Desktop uses a sidebar; mobile uses bottom navigation (Entries opens Transactions). Profile opens settings and account options. Shared client state preserves unsaved entry text and draft details during in-app navigation; a full page reload still discards unsaved client state.
-
-Overview and Transactions use the existing POC API and saved D1 records. Login/setup are honest browser-demo entry screens, not Google authentication or persisted preference forms. Saved-record editing/deletion, exports, charts, and durable chat history remain future work.
-
-To rerun the responsive browser suite:
+For browser tests, start the local Worker above, then in another terminal:
 
 ```sh
 npx playwright install chromium
-npm run db:local
-npm run build
-npm run dev:worker -- --var AI_ENABLED:false
-# In another terminal:
 npm run test:ui
 ```
 
-The browser tests use the local Worker at `http://127.0.0.1:8787`, create synthetic records, and do not invoke AI. They check direct-route loads, accessible current navigation, the profile dialog, draft preservation across routes, saving/search/filtering, persistence after reload, and narrow layouts. `PLAYWRIGHT_BASE_URL` can select another test deployment. An existing browser can be selected with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
+UI tests mock the account/API boundary, covering responsive routes, drafts, filters, signed-out gating, sign-out, and missing-configuration behavior. Real API ownership and session validation are tested separately in `npm test`. `PLAYWRIGHT_BASE_URL` selects a test server; `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` selects an existing Chromium executable. `node scripts/smoke.mjs http://localhost:8787` checks actual signed-out API protection and static routing without creating users or calling AI.
 
-## Theme
+## Authentication and data
 
-- `src/components/app-theme.tsx` provides the app-wide light Matcha theme.
-- `src/astryx-themes.ts` is generated by Astryx and imports the built theme, production CSS, and font CSS. Regenerate it with the CLI rather than editing it.
-- `src/app/globals.css` loads Astryx’s reset and base styles.
-- The theme loads its fonts from Google Fonts; browser/system fallback fonts remain available if that service is unreachable. The build does not fetch fonts.
-- Astryx package versions are aligned and pinned in `package.json` and `package-lock.json`.
+- Google OAuth is handled by the Worker under `/api/auth/*`; the static frontend has no provider secrets.
+- Better Auth stores users, accounts, and revocable sessions in D1. OAuth tokens are encrypted using `BETTER_AUTH_SECRET`.
+- Ledger records reference user IDs rather than browser sessions. Sessions can expire/sign out without deleting saved transactions.
+- Anonymous cookies and session creation are rejected. The UI hides private views until a validated account session is available; each API independently checks ownership.
+- Existing browser-demo tables remain for their original expiration cleanup. New account tables are additive migrations, not destructive replacements.
+- INR and Asia/Kolkata remain the current fixed ledger defaults. Full onboarding, exports, deletion controls, charts, and durable chat history are backlog items.
 
-Use `npm run astryx -- component Button` to inspect component APIs and `npm run astryx -- doctor` to inspect setup. The generated `AGENTS.md` documents the component-first authoring conventions.
+## Theme and routes
 
-See [UI plan](docs/ui-plan.md), [database architecture](docs/database-architecture.md), and [chat/AI flow](docs/chat-ai-flow.md) for the implementation direction. A Cloudflare account is required for deployment and AI invocation. The frontend alone needs no credentials; browser sessions are anonymous for this POC. Google OAuth remains an MVP task.
+Astryx's generated `src/astryx-themes.ts` imports Matcha's built theme, production CSS, and font CSS. `src/components/app-theme.tsx` provides the light theme, and `src/app/globals.css` loads the reset/base styles. The theme loads Google Fonts with system fallbacks; the build itself does not fetch fonts. Astryx packages are version-aligned and pinned.
 
-## Verification notes
+Routes: `/chat/`, `/overview/`, `/transactions/`, `/settings/`, `/login/`, `/setup/`; `/` aliases Chat. Shared client state preserves unsaved entries during in-app navigation. Signing out clears account state; reloading discards unsaved client-only drafts.
 
-The initial setup passed lint, TypeScript, static production build, and Astryx built-output diagnostics (no failures). Browser smoke checks covered the example disclosure, active Matcha tokens, console errors, and horizontal overflow at 1440, 390, and 320 CSS pixels.
+Use `npm run astryx -- component Button` to inspect component APIs. Follow `AGENTS.md` for component-first authoring conventions.
 
-Astryx diagnostics flag its external Google Fonts import for manual verification; the rendered browser preview loaded those fonts. Its source check also reports token-based inline layout styles and the required global CSS import as review items.
+## Deployment
 
-The installation audit reports seven moderate development-tooling findings through TypeScript ESLint's transitive `minimatch` dependency. A compatible `npm audit fix` did not resolve them. No forced major dependency override was applied. Recheck upstream tooling updates before adding automated processing of untrusted source trees.
+Follow [Google auth setup](docs/google-auth-setup.md). Configure all OAuth secrets and approved redirect URIs before replacing the working demo, then apply remote migrations and deploy. Do not mark AUTH-01 complete until real Google login, same-account access from another browser, different-account isolation, and logout have been verified remotely.
+
+Historical deployment details: [POC deployment](docs/poc-deployment.md). Design references: [UI](docs/ui-plan.md), [database](docs/database-architecture.md), [chat/AI](docs/chat-ai-flow.md).
+
+The installation audit reports seven moderate development-tooling findings through TypeScript ESLint's transitive minimatch dependency. Compatible audit updates did not resolve them; no forced major override was applied. Astryx diagnostics also flag external font loading for manual review. Current auth overhead and quotas still require measurement before promising free production capacity.

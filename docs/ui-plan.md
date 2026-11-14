@@ -166,3 +166,6 @@ UI-01 is implemented: the shell is adapted from Astryx’s `shell-side-nav` temp
 The POC entry logic now lives in a shared provider, keeping input, draft, uncertain-save key, and selected ledger month through in-app route changes. Overview and Transactions use existing real POC data; search and type filtering are scoped to the loaded month. Login/setup accurately explain the browser demo and fixed preferences. Existing POC account/data limitations remain.
 
 Full chat transcript/composer behavior, complete draft lifecycle, charts, saved-record actions, and actual authentication/onboarding remain tracked separately. UI-01 does not mark those tasks complete. Next: UI-02 chat composition and history.
+
+
+Google authentication implementation is now prepared in source: signed-out users see Continue with Google; account sessions gate private views; Profile shows the signed-in name/email and Sign out; saved records are owned by account IDs rather than browser cookies. Login/setup no longer offer anonymous access. Live activation and real Google consent/callback verification are pending the credentials listed in [Google auth setup](google-auth-setup.md). UI fixtures test account states; actual signed-session ownership is tested against the Worker separately.
