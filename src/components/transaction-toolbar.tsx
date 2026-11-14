@@ -52,7 +52,6 @@ export function TransactionToolbar({search,onSearch,filters,onFilters,sort,onSor
         presentation={isMobile ? "bottom-sheet" : "popover"} alignment="end" width="22rem" padding={4}
         content={<VStack gap={4}>
           <Heading level={2} style={{fontFamily:"var(--font-family-body)"}}>Filter transactions</Heading>
-          <Text type="supporting">Within the loaded month. Changes apply when you choose Apply filters.</Text>
           <Selector label="Type" width="100%" value={draft.type} onChange={type=>setDraft({...draft,type})}
             options={[{value:"all",label:"All types"},{value:"expense",label:"Expenses"},{value:"income",label:"Income"}]} />
           <Selector label="Category" width="100%" value={draft.category} onChange={category=>setDraft({...draft,category})}

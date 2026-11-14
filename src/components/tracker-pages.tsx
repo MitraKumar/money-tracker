@@ -47,8 +47,6 @@ export function SettingsScreen() {
       <ListItem label="Retention" description="Saved transactions belong to your account. Signing out or session expiry does not delete them." />
     </List>
     <VStack gap={3}>
-      <Heading level={2} style={bodyHeading}>Before you add anything</Heading>
-      <Text as="p" color="secondary">Keep your Google account secure. Monthly CSV exports are available in Transactions. Account-deletion controls are still being developed; this remains an early pilot.</Text>
       <HStack wrap="wrap" gap={3}><Button label="Sign out" onClick={()=>void signOut()} isDisabled={busy} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
     </VStack>
   </>;

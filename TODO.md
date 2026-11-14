@@ -11,7 +11,7 @@ This is the implementation tracker across sessions. The architecture documents d
 | Working product | Deployed account-owned POC: AI/manual confirmation, transaction details/edit/delete, monthly charts/totals and CSV |
 | Backend | Worker + D1 + capped live AI + configured Google OAuth; Google sign-in confirmed by user; full MVP schema remains open |
 | Next task | **UI-07 — onboarding/settings; finish DATA-02 API pagination separately** |
-| Active task | **None — Overview export removed and verified locally** |
+| Active task | **None — chat suggestion pills implemented; production build blocked by TypeScript config parsing** |
 | External setup needed later | OAuth secrets/callback configured; Google sign-in confirmed; remaining OPS-01 checks cover live cross-browser access/isolation, logout, and runtime usage |
 
 ## How to use this tracker
@@ -149,6 +149,7 @@ Append one row after each implementation session. Link the commit only if one wa
 
 | Task | Outcome and checks | Remaining work / next step | Commit |
 | --- | --- | --- | --- |
+| Chat suggestion pills | Moved empty-chat autofill prompts into a wrapping row immediately above the composer; small secondary buttons use the full-radius theme token. Fill-and-focus behavior retained. Lint and standalone type checks passed; production build compiles but fails parsing TypeScript --showConfig output. Astryx doctor on existing out: zero failures, existing font warnings (output predates this change) | Verify production build/browser layout once build tooling issue is resolved; UI-07 / AUTH-02 next. No commit/push/deployment | Not committed |
 | Overview export removal | Removed Overview export UI and unused wrapper; Transactions retains its toolbar Export and shared download hook. Updated Settings export-location copy, UI plan, and Overview regression. Types/lint/static build passed; Astryx zero failures (existing font warnings); three Overview browser checks passed across desktop/mobile/compact for charts/month switching and absent Export | UI-07 / AUTH-02 next. No commit, push, or deployment | Not committed |
 | UI-10 Export follow-up | Moved Transactions export into the search/filter/sort row with label Export; shared download hook retains selected-month CSV scope, loading/error handling, and Overview export behavior. Updated scope description/UI plan. Types/lint/static build passed; Astryx zero failures (existing font warnings); three Overview and three transaction browser checks passed, including inline control alignment, viewport fit, and CSV download under active search; mobile screenshot inspected | UI-07 / AUTH-02 next. No commit, push, or deployment | Not committed |
 | UI-10 | Replaced expanded inline search/filter rows with compact search, filter and sort toolbar; desktop popover/mobile bottom sheet, draft filters with Apply/Reset/Cancel and date validation, active-filter removal/Clear all, single results summary. Updated UI plan and existing transaction regression. Types/lint/static build passed; Astryx zero failures (existing font warnings). Six transaction browser scenarios passed across desktop/mobile/compact, including staged/cancelled/reset/invalid filters, sorting, edits/deletes/conflicts/retries; desktop/mobile screenshots inspected | UI-07 / AUTH-02 next; DATA-02 API pagination separate. No commit, push, or deployment | Not committed |

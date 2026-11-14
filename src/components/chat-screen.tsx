@@ -37,8 +37,6 @@ export function ChatScreen() {
             <ChatMessageList align="top" style={{flex:"1 1 0%", minHeight:0, overflowY:"auto", overflowX:"hidden"}}>
               {chatLines.length === 0 ? <VStack gap={3} padding={3}>
                 <Heading level={2} style={{fontFamily:"var(--font-family-body)"}}>What came in or went out?</Heading>
-                {["Spent ₹120 on lunch", "Received ₹25,000 salary today", "Paid ₹800 for groceries yesterday"].map(example =>
-                  <Button key={example} label={example} variant="ghost" isDisabled={actionsDisabled||entryBlocked} onClick={() => {changeText(example);input.current?.focus();}} />)}
               </VStack> : [...groups].map(([day, lines]) => <VStack key={day} gap={4} as="section" aria-label={day}>
                 <ChatSystemMessage variant="divider">{day}</ChatSystemMessage>
                 {lines.map(line => <ChatMessage key={line.id} sender={line.sender}>
@@ -62,6 +60,12 @@ export function ChatScreen() {
               </VStack>}
               {activePreview && !["saving","unknown","checking"].includes(activePreview.status) &&
                 <Button label="Start separate entry" onClick={() => {focusSeparateEntry.current=true;startSeparateEntry();}} />}
+              {chatLines.length === 0 && <HStack gap={2} wrap="wrap" aria-label="Entry suggestions">
+                {["Spent ₹120 on lunch", "Received ₹25,000 salary today", "Paid ₹800 for groceries yesterday"].map(example =>
+                  <Button key={example} label={example} size="sm" variant="secondary"
+                    style={{borderRadius:"var(--radius-full)"}} isDisabled={actionsDisabled||entryBlocked}
+                    onClick={() => {changeText(example);input.current?.focus();}} />)}
+              </HStack>}
               <ChatComposer value={text} onChange={changeText} onSubmit={() => {void parse();}} isDisabled={actionsDisabled}
                 input={<ChatComposerInput handleRef={input} label="Expense or income" value={text} onChange={changeText}
                   placeholder="Type an expense or income…" maxRows={4} isDisabled={actionsDisabled}

@@ -75,7 +75,6 @@ export function TransactionsScreen() {
       <Text type="supporting">{ledger.transactions.length?"Try another description, category, or date range.":"Add an entry in Chat, or load another month."}</Text>
       {!ledger.transactions.length&&<Button label="Go to chat" href="/chat" />}
     </VStack>)}
-    <Text type="supporting">Filters apply to the loaded month. Export includes all confirmed records for that month in INR, regardless of search or filters. Up to 100 saved records are supported per account in this pilot; Load more reveals additional matches from that loaded data.</Text>
     {selected&&<TransactionDialog key={selected} id={selected} onClose={()=>select(null)} />}
   </>;
 }

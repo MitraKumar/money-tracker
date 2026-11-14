@@ -70,7 +70,7 @@ Desktop layout sketch; this is a wireframe, not a final visual mockup:
 
 All amounts above are illustrative. The right panel is secondary and collapses away on mobile; it must never crowd out chat. Label its values as this month's confirmed records.
 
-**Empty chat:** short explanation and three example prompts: “Spent ₹120 on lunch”, “Received ₹25,000 salary today”, and “Paid ₹800 for groceries yesterday”. Selecting a prompt fills the composer for editing; it does not send automatically.
+**Empty chat:** short explanation and three example prompts: “Spent ₹120 on lunch”, “Received ₹25,000 salary today”, and “Paid ₹800 for groceries yesterday”. The prompts appear as small pill buttons in a wrapping row immediately above the composer. Selecting a prompt fills the composer for editing; it does not send automatically.
 
 **Composer:** multiline plain text, Send control with an accessible name, and persistent “Add manually” access. Desktop Enter sends and Shift+Enter inserts a line break; do not send during IME composition. On mobile, keep an explicit Send control. Preserve unsent text when an API request fails.
 
