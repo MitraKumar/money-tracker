@@ -1,9 +1,11 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useReducer, useRef, useState } from "react";
 import { entrySchema, localDate, money, type Entry, type Transaction } from "@/lib/ledger";
 
-export type ChatLine = { id: string; sender: "user" | "assistant"; text: string; at: string };
+import { previewReducer, isActivePreview, isLockedPreview, type PreviewScenario } from "@/lib/chat-preview";
+
+export type ChatLine = { id: string; sender: "user" | "assistant"; text: string; at: string; previewId?: string };
 
 type Ledger = { transactions: Transaction[]; summary: { income: number; expenses: number }; month: string };
 type Draft = { entry: Entry; draftId: string | null };
@@ -32,6 +34,9 @@ function useTrackerState() {
   const [configured, setConfigured] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [previews, previewAction] = useReducer(previewReducer, []);
+  const [previewScenario, setPreviewScenario] = useState<PreviewScenario>("expense");
+  const activePreview = previews.find(isActivePreview);
   const [chatLines, setChatLines] = useState<ChatLine[]>([]);
   const [chatError, setChatError] = useState(false);
   const [failNextChat, setFailNextChat] = useState(false);
@@ -83,6 +88,7 @@ function useTrackerState() {
     try {
       await api("/api/auth/sign-out", {});
       setReady(false); setUser(null); setLedger(null); setDraft(null); setText(""); setMonth("");
+      previewAction({type:"reset"}); setPreviewScenario("expense");
       setChatLines([]); setChatError(false); setHistoryLoaded(false); setFailNextChat(false);
       saveOperation.current = null; setUncertainSave(false);
       setMessage("You have signed out.");
@@ -94,17 +100,22 @@ function useTrackerState() {
     setLedger(data); setMonth(data.month);
   }
   function parse() {
-    if (chatSending.current || busy || !ready || draft || !text.trim() || text.length > 500) return;
+    if (chatSending.current || busy || !ready || draft || (activePreview && activePreview.status !== "needs-clarification") || !text.trim() || text.length > 500) return;
     chatSending.current = true;
     const at = new Date().toISOString();
     if (failNextChat) {
       setFailNextChat(false); setChatError(true);
     } else {
+      const previewId = activePreview?.id ?? crypto.randomUUID();
+      if (activePreview) previewAction({type:"reply",id:previewId,text});
+      else previewAction({type:"add",id:previewId,scenario:previewScenario,date:localDate()});
       setChatLines(lines => [...lines,
         { id: crypto.randomUUID(), sender: "user", text: text.trim(), at },
-        { id: crypto.randomUUID(), sender: "assistant", text: "Example response: your entry would be organized for review here. Nothing was saved. Use Add manually to record a real transaction.", at },
+        ...(activePreview ? [] : [{ id: crypto.randomUUID(), sender: "assistant" as const,
+          text: "Example response: review the sample transaction below. It is separate from your real ledger.", at, previewId }]),
       ]);
-      setText(""); setChatError(false);
+      if (!activePreview || entrySchema.safeParse({...activePreview.entry,amount:text.trim()}).success) setText("");
+      setChatError(false);
     }
     chatSending.current = false;
   }
@@ -139,6 +150,7 @@ function useTrackerState() {
     if (draft && !uncertainSave) setDraft({ ...draft, entry: { ...draft.entry, [key]: value } });
   }
   function startManual() {
+    if (activePreview) return;
     setDraft({ entry: blankEntry(), draftId: null });
     setMessage("Enter the details and confirm to save.");
   }
@@ -152,7 +164,12 @@ function useTrackerState() {
     try { await refresh(); } catch (error) { handleExpired(error); setMessage(error instanceof Error ? error.message : "Could not load this month."); }
     finally { setBusy(false); }
   }
-  return { chatLines, chatError, failNextChat, setFailNextChat, historyLoaded, loadChatHistory, user, authLoading, configured, signIn, signOut, ready, busy, text, message, draft, ledger, month, uncertainSave,
+  function startSeparateEntry() {
+    if (!activePreview || isLockedPreview(activePreview)) return;
+    previewAction({type:"cancel",id:activePreview.id});
+    setChatError(false);
+  }
+  return { previews, previewAction, previewScenario, setPreviewScenario, activePreview, startSeparateEntry, chatLines, chatError, failNextChat, setFailNextChat, historyLoaded, loadChatHistory, user, authLoading, configured, signIn, signOut, ready, busy, text, message, draft, ledger, month, uncertainSave,
     setMonth, parse, save, edit, startManual, cancelDraft, changeText, changeType, loadMonth };
 }
 

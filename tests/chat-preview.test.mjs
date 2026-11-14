@@ -1,0 +1,66 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {build} from 'esbuild';
+
+await mkdir('.wrangler/preview-tests',{recursive:true});
+const bundle=await build({entryPoints:['src/lib/chat-preview.ts'],bundle:true,platform:'node',format:'esm',packages:'external',write:false});
+await writeFile('.wrangler/preview-tests/preview.mjs',bundle.outputFiles[0].text);
+const {previewReducer:reduce}=await import('../.wrangler/preview-tests/preview.mjs');
+const add = (state=[],scenario='expense',id='draft-1') => reduce(state,{type:'add',id,scenario,date:'2026-11-14'});
+const act=(state,type,extra={})=>reduce(state,{type,id:'draft-1',...extra});
+
+test('clarification remains on one draft with its original date and cannot silently accept a separate draft',()=>{
+  const state=add([],'clarification');
+  assert.equal(add(state,'income','draft-2').length,1);
+  assert.equal(act(state,'confirm',{key:'no'})[0].status,'needs-clarification');
+  const invalid=act(state,'reply',{text:'not money'});
+  assert.equal(invalid[0].status,'needs-clarification');
+  const ready=act(invalid,'reply',{text:'120.50'});
+  assert.equal(ready[0].status,'ready');
+  assert.equal(ready[0].entry.amount,'120.50');
+  assert.equal(ready[0].entry.date,'2026-11-14');
+  assert.equal(ready[0].id,'draft-1');
+});
+test('unknown confirmation keeps the same key and frozen values until acknowledgment',()=>{
+  let state=act(add(),'edit');
+  state=act(state,'change',{field:'amount',value:'17.50'});
+  state=act(state,'apply');
+  state=act(state,'confirm',{key:'original-save'});
+  assert.equal(state[0].receipt,undefined);
+  assert.deepEqual(act(state,'confirm',{key:'duplicate'}),state);
+  assert.deepEqual(act(state,'cancel'),state);
+  state=act(state,'lost');
+  assert.equal(state[0].status,'unknown');
+  assert.equal(state[0].receipt,undefined);
+  assert.deepEqual(act(state,'change',{field:'amount',value:'999'}),state);
+  assert.deepEqual(act(state,'ack'),state);
+  state=act(state,'check');
+  assert.equal(state[0].saveKey,'original-save');
+  assert.equal(state[0].status,'checking');
+  assert.equal(state[0].receipt,undefined);
+  state=act(state,'ack');
+  assert.equal(state[0].receipt.entry.amount,'17.50');
+  assert.deepEqual(act(state,'ack'),state);
+  assert.deepEqual(act(state,'confirm',{key:'new-save'}),state);
+});
+test('invalid edits cannot be confirmed; rejected saves retain edits; cancelled drafts cannot return',()=>{
+  let state=act(add(),'edit');
+  state=act(state,'change',{field:'date',value:'2026-02-30'});
+  assert.equal(act(state,'apply')[0].status,'editing');
+  assert.equal(act(state,'confirm',{key:'invalid'})[0].receipt,undefined);
+  state=act(state,'change',{field:'date',value:'2026-11-13'});
+  state=act(state,'change',{field:'type',value:'income'});
+  assert.equal(state[0].entry.category,'other-income');
+  state=act(state,'apply');
+  state=act(state,'confirm',{key:'rejected'});
+  state=act(state,'save-failed');
+  assert.equal(state[0].entry.date,'2026-11-13');
+  assert.equal(state[0].status,'ready');
+  assert.equal(state[0].receipt,undefined);
+  state=act(state,'cancel');
+  assert.deepEqual(act(state,'confirm',{key:'late-save'}),state);
+  assert.deepEqual(act(state,'reply',{text:'100'}),state);
+  assert.equal(add(state,'income','draft-2').length,2);
+  assert.deepEqual(reduce(state,{type:'reset'}),[]);
+});

@@ -7,11 +7,11 @@ This is the implementation tracker across sessions. The architecture documents d
 | Item | Status |
 | --- | --- |
 | Foundation | Next.js + TypeScript + Astryx Matcha starter implemented |
-| Latest implementation commit | UI-02 — chat composition and fixture history (this commit) |
+| Latest implementation commit | UI-03 — transaction previews and Astryx chat components (this commit) |
 | Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
 | Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
-| Next task | **UI-03 — transaction preview and clarification fixtures; AUTH-01 real sign-in verification remains pending** |
-| Active task | **None — UI-02 completed with fixture responses** |
+| Next task | **UI-04 — reusable manual transaction form; AUTH-01 real sign-in verification remains pending** |
+| Active task | **None — UI-03 and Astryx chat-component follow-up completed** |
 | External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
 
 ## How to use this tracker
@@ -45,7 +45,7 @@ Build realistic UI states before connecting the backend. Keep fixture data clear
 
 - [x] **UI-01 — Application shell and routes** · Depends on SETUP-02. Add `/login`, `/setup`, `/chat`, `/overview`, `/transactions`, `/settings`, shared desktop navigation, mobile bottom navigation, and profile menu. Done when each route survives direct navigation in the static export, current navigation is identified accessibly, and layouts work on mobile/desktop. Keep arbitrary record/thread IDs in query parameters.
 - [x] **UI-02 — Chat composition and history** · Depends on UI-01. Add Astryx chat layout, date-grouped messages, timestamps, example prompts that fill without sending, composer, and manual-entry access. Done when keyboard/IME behavior is correct, input survives simulated errors, and the mobile keyboard does not cover controls. Use fixture responses only at this stage.
-- [ ] **UI-03 — Transaction preview and clarification** · Depends on UI-02. Build draft states, editable amount/type/category/date/description, one active clarification context, cancel, saving, saved receipt, and unknown-save status. Done when fixture interactions show every state accurately, category edits require no AI call, and nothing appears saved before a simulated acknowledgment.
+- [x] **UI-03 — Transaction preview and clarification** · Depends on UI-02. Build draft states, editable amount/type/category/date/description, one active clarification context, cancel, saving, saved receipt, and unknown-save status. Done when fixture interactions show every state accurately, category edits require no AI call, and nothing appears saved before a simulated acknowledgment.
 - [ ] **UI-04 — Manual transaction form** · Depends on UI-01. Build reusable amount, direction, category, date, and description inputs. Done when errors are inline, values are retained on failure, and the same form can support draft and saved-record editing. Define a typed submit boundary for later API integration.
 - [ ] **UI-05 — Transactions view** · Depends on UI-04. Desktop table/mobile list, filters, cursor/load-more UI, details, edit, delete confirmation, export scope, and conflict/loading/empty states. Done when fixture controls work and no destructive action silently succeeds.
 - [ ] **UI-06 — Monthly overview** · Depends on UI-01. Income, expenses, net cash flow, category bars, daily trend, recent records, month switcher, and accessible chart alternatives. Done when all fixture totals reconcile and empty months show honest empty states. Add Recharts only when needed and use Matcha tokens.
@@ -113,7 +113,11 @@ Append one row after each implementation session. Link the commit only if one wa
 
 | AUTH-01 (partial) | Google auth and account-ledger implementation prepared; local migrations, signed-session/isolation tests, static checks and 15 fixture-based UI checks passed | User deployed/configured Cloudflare; live API protection and Google OAuth initiation verified; real Google token exchange remains unverified | Not committed |
 
-| UI-02 | Astryx chat layout/composer, day-grouped transcript and timestamps, fill-only prompts, example history, explicit simulated send failure/retry, navigation-preserved input/history, desktop Enter/Shift+Enter and IME guards, touch Return and manual access; type/lint/static build/unit checks and all 21 responsive Playwright scenarios passed; Astryx has zero failures (existing external-font warnings) | Continue UI-03. Chat responses/history are tab-memory fixtures; no parse/save request is issued by chat. Existing manual confirmation still uses the real ledger API. Physical software-keyboard checks remain in QA-02; AUTH-01 verification remains open. No deployment | This commit |
+| UI-02 | Astryx chat layout/composer, day-grouped transcript and timestamps, fill-only prompts, example history, explicit simulated send failure/retry, navigation-preserved input/history, desktop Enter/Shift+Enter and IME guards, touch Return and manual access; type/lint/static build/unit checks and all 21 responsive Playwright scenarios passed; Astryx has zero failures (existing external-font warnings) | Continue UI-03. Chat responses/history are tab-memory fixtures; no parse/save request is issued by chat. Existing manual confirmation still uses the real ledger API. Physical software-keyboard checks remain in QA-02; AUTH-01 verification remains open. No deployment | `4b1a716` |
+
+| UI-03 | Added transcript-linked example previews, inline validated edits of all five fields, one amount-clarification context with retained invalid replies/reference date, cancellation/separate entry, locked saving/unknown/checking states, rejected-save recovery, and acknowledgment-only sample receipts. Unit/state-transition checks, types, lint, static build, all 30 responsive UI scenarios, and focused composer-focus checks passed; Astryx zero failures (existing font warnings) | Continue UI-04. Fixture actions make no API writes and never update real ledger totals; manual API path retained. Persistent drafts/confirmation remain CHAT-02 and APP-02; physical mobile-keyboard check remains QA-02. No deployment | This commit |
+
+| UI-03 follow-up | Replaced the general textarea/send button with ChatComposerInput and ChatSendButton; message content/previews now use ChatMessageBubble and dates use ChatSystemMessage dividers. Plain-text configuration, IME guards, mobile newline behavior, error retention, and 500-character validation preserved. Type/lint/build/unit checks and Astryx diagnostics passed; 30 responsive scenarios verified across the main and corrected touch-assertion runs | Continue UI-04; fixtures remain separate from real ledger operations. Physical software-keyboard verification remains QA-02. No deployment | This commit |
 
 ## References
 
