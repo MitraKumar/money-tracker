@@ -47,7 +47,7 @@ export function SettingsScreen() {
       <ListItem label="Retention" description="Saved transactions belong to your account. Signing out or session expiry does not delete them." />
     </List>
     <VStack gap={3}>
-      <HStack wrap="wrap" gap={3}><Button label="Sign out" onClick={()=>void signOut()} isDisabled={busy} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
+      <HStack wrap="wrap" gap={3}><Button label="Sign out" variant="destructive" onClick={()=>void signOut()} isDisabled={busy} /><Button label="View ledger defaults" href="/setup" as={Link} variant="ghost" /></HStack>
     </VStack>
   </>;
 }
