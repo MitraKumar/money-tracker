@@ -6,11 +6,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppShell, useAppShellMobile } from "@astryxdesign/core/AppShell";
 import { Button } from "@astryxdesign/core/Button";
+import { Icon } from "@astryxdesign/core/Icon";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { ChatIcon, OverviewIcon, TransactionsIcon, SettingsIcon } from "./navigation-icons";
 import { Avatar } from "@astryxdesign/core/Avatar";
 import { Layout, LayoutContent, LayoutFooter } from "@astryxdesign/core/Layout";
 import { Popover } from "@astryxdesign/core/Popover";
 import { SideNav, SideNavItem, SideNavSection } from "@astryxdesign/core/SideNav";
 import { TopNav } from "@astryxdesign/core/TopNav";
+import { Grid } from "@astryxdesign/core/Grid";
 import { HStack } from "@astryxdesign/core/HStack";
 import { VStack } from "@astryxdesign/core/VStack";
 import { Text } from "@astryxdesign/core/Text";
@@ -20,9 +24,9 @@ import { money } from "@/lib/ledger";
 import { LoginScreen } from "./tracker-pages";
 
 const destinations = [
-  { href: "/chat", label: "Chat" },
-  { href: "/overview", label: "Overview" },
-  { href: "/transactions", label: "Transactions" },
+  { href: "/chat", label: "Chat", icon: ChatIcon },
+  { href: "/overview", label: "Overview", icon: OverviewIcon },
+  { href: "/transactions", label: "Transactions", icon: TransactionsIcon },
 ];
 function useCurrentPath() { return usePathname().replace(/\/$/, "") || "/chat"; }
 
@@ -44,6 +48,7 @@ function MonthlyTotals({ compact = false }: { compact?: boolean }) {
 }
 
 function Profile() {
+  const { isMobile } = useAppShellMobile();
   const [open, setOpen] = useState(false);
   const { user, signOut, busy } = useTracker();
   return <Popover label="Your profile" isOpen={open} onOpenChange={setOpen} alignment="end" presentation="adaptive"
@@ -51,7 +56,8 @@ function Profile() {
       <Text weight="semibold">{user?.name}</Text>
       <Text type="supporting">{user?.email}</Text>
       <VStack as="nav" aria-label="Profile navigation" gap={2}>
-        <Button label="Settings" href="/settings" as={Link} onClick={() => setOpen(false)} />
+        {isMobile ? <IconButton label="Settings" tooltip="Settings" icon={<Icon icon={SettingsIcon} />} href="/settings" as={Link} onClick={() => setOpen(false)} />
+          : <Button label="Settings" icon={<Icon icon={SettingsIcon} />} href="/settings" as={Link} onClick={() => setOpen(false)} />}
       </VStack>
       <Button label="Sign out" variant="ghost" isDisabled={busy} onClick={() => { setOpen(false); void signOut(); }} />
     </VStack>}>
@@ -72,12 +78,13 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   } footer={isMobile && user ? <LayoutFooter hasDivider padding={3}>
     <VStack gap={3}>
     {current === "/chat" && <MonthlyTotals compact />}
-    <HStack as="nav" aria-label="Mobile navigation" gap={1}
+    <HStack as="nav" aria-label="Mobile navigation"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-      {destinations.map(({ href, label }) => <Button key={href} label={label === "Transactions" ? "Entries (Transactions)" : label} href={href} as={Link}
-        width="100%" size="lg" variant={current === href ? "primary" : "ghost"}
-        style={{ paddingInline: "var(--spacing-1)" }}
-        aria-current={current === href ? "page" : undefined}>{label === "Transactions" ? "Entries" : label}</Button>)}
+      <Grid columns={4} gap={1} width="100%">
+      {[...destinations, { href: "/settings", label: "Settings", icon: SettingsIcon }].map(({ href, label, icon }) => <IconButton key={href} label={label} tooltip={label} icon={<Icon icon={icon} />}
+        href={href} as={Link} width="100%" size="lg" variant={current === href ? "primary" : "ghost"}
+        aria-current={current === href ? "page" : undefined} />)}
+      </Grid>
     </HStack>
     </VStack>
   </LayoutFooter> : undefined} />;
@@ -97,10 +104,10 @@ export function TrackerShell({ children }: { children: React.ReactNode }) {
       <Text type="supporting">Signed in with Google</Text>
     </VStack>}>
       <SideNavSection title="Your money">
-        {destinations.map(({href,label}) => <SideNavItem key={href} label={label} href={href} as={Link} isSelected={current === href} />)}
+        {destinations.map(({href,label,icon}) => <SideNavItem key={href} label={label} icon={icon} href={href} as={Link} isSelected={current === href} />)}
       </SideNavSection>
       <SideNavSection title="Your space">
-        <SideNavItem label="Settings" href="/settings" as={Link} isSelected={current === "/settings"} />
+        <SideNavItem icon={SettingsIcon} label="Settings" href="/settings" as={Link} isSelected={current === "/settings"} />
       </SideNavSection>
     </SideNav> : undefined}>
     <ShellContent>{children}</ShellContent>

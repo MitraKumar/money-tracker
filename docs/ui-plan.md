@@ -12,7 +12,7 @@ Keep light mode as the initial design reference. Check the installed Matcha them
 
 ## Navigation and screen map
 
-Default destination after onboarding: **Chat**, because quick recording is the central action. Keep three primary destinations: Chat, Overview, and Transactions. Settings lives under the profile menu. Do not add a separate Reports section in the MVP.
+Default destination after onboarding: **Chat**, because quick recording is the central action. Keep three primary destinations: Chat, Overview, and Transactions. Settings lives under the profile menu and has a direct mobile navigation shortcut. Desktop navigation pairs icons with labels; mobile navigation shows icons only, with accessible names and tooltips. Do not add a separate Reports section in the MVP.
 
 ```mermaid
 flowchart LR
@@ -36,7 +36,7 @@ Use static paths `/login`, `/setup`, `/chat`, `/overview`, `/transactions`, and 
 | --- | --- |
 | Wide desktop, approximately 1200 px and up | Compact left navigation; main content; optional context panel on Chat |
 | Tablet/small desktop | Navigation collapses; single main column; context moves into an expandable section |
-| Mobile | Page title and profile action at top; three bottom navigation items; full-width content |
+| Mobile | Page title and profile action at top; four icon-only bottom navigation items; full-width content |
 
 Treat these as layout targets, then adjust based on actual content rather than device names. The mobile composer sits above navigation and the software keyboard, respects safe-area insets, and never covers the latest draft or its confirmation buttons. Use one intentional message scroll region. Keep reading width around 640–760 px for chat; allow the overview more width.
 
