@@ -1,0 +1,2 @@
+# Optional local override: avoid live AI requests while developing the manual flow.
+AI_ENABLED=false

@@ -6,9 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint .",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit && tsc -p worker/tsconfig.json",
     "astryx": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs",
-    "ui:check": "npm run astryx -- doctor --built out"
+    "ui:check": "npm run astryx -- doctor --built out",
+    "test": "node --test tests/*.test.mjs",
+    "dev:worker": "wrangler dev",
+    "db:local": "wrangler d1 migrations apply money-tracker-poc --local",
+    "db:remote": "wrangler d1 migrations apply money-tracker-poc --remote",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:dry": "wrangler deploy --dry-run"
   },
   "dependencies": {
     "@astryxdesign/core": "0.7.16",
@@ -16,16 +22,19 @@
     "@stylexjs/stylex": "0.19.2",
     "next": "16.4.6",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@astryxdesign/cli": "0.7.16",
+    "@cloudflare/workers-types": "5.20261114.1",
     "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.6",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "wrangler": "4.156.0"
   },
   "engines": {
     "node": ">=24 <25"

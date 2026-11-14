@@ -2,7 +2,9 @@
 
 Start with [TODO.md](TODO.md) for task IDs, dependencies, acceptance criteria, and the handoff between sessions.
 
-Next.js App Router + TypeScript, with Astryx’s Matcha theme. The frontend is configured for static export, ready for the planned Cloudflare Static Assets + Worker API architecture.
+Next.js App Router + TypeScript and Astryx Matcha, deployed as a browser-isolated Cloudflare proof of concept with Workers API, D1, and Workers AI.
+
+Live demo: https://money-tracker-poc.kaushik0976.workers.dev — use test data only. See [POC deployment](docs/poc-deployment.md) for architecture, limits, verification, and deployment commands.
 
 ## Development
 
@@ -13,11 +15,14 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. The starter page demonstrates real Astryx components and the installed Matcha theme. Its example disclosure is local UI only: authentication, database persistence, and AI parsing are not connected yet.
+Open http://localhost:3000 for frontend development. The demo needs the Worker APIs for session setup, parsing, and persistence; this command alone does not provide them.
+
+For the full local demo, run `npm run db:local`, `npm run build`, then `npm run dev:worker -- --var AI_ENABLED:false`. Open the Wrangler URL (normally http://localhost:8787). AI is disabled in this example; manual entries use local D1. AI calls, if enabled, use remote Cloudflare resources. Rebuild the frontend after UI edits.
 
 ## Checks and production build
 
 ```sh
+npm run test
 npm run lint
 npm run typecheck
 npm run build
@@ -38,7 +43,7 @@ The type-check command generates Next.js route declarations first, so it works o
 
 Use `npm run astryx -- component Button` to inspect component APIs and `npm run astryx -- doctor` to inspect setup. The generated `AGENTS.md` documents the component-first authoring conventions.
 
-See [UI plan](docs/ui-plan.md), [database architecture](docs/database-architecture.md), and [chat/AI flow](docs/chat-ai-flow.md) for the implementation direction. No Cloudflare account, paid service, or environment secrets are required for this frontend setup.
+See [UI plan](docs/ui-plan.md), [database architecture](docs/database-architecture.md), and [chat/AI flow](docs/chat-ai-flow.md) for the implementation direction. A Cloudflare account is required for deployment and AI invocation. The frontend alone needs no credentials; browser sessions are anonymous for this POC. Google OAuth remains an MVP task.
 
 ## Verification notes
 

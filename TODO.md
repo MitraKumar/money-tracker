@@ -8,11 +8,11 @@ This is the implementation tracker across sessions. The architecture documents d
 | --- | --- |
 | Foundation | Next.js + TypeScript + Astryx Matcha starter implemented |
 | Latest implementation commit | `a6acd5a` — app setup; pushed to `origin/main` |
-| Working product | Starter page only; no authenticated screens or persisted financial records |
-| Backend | Not implemented; no Worker, D1 migrations, auth, or AI connection |
+| Working product | Live browser-isolated POC: AI/manual draft → confirmation → D1 records and monthly totals |
+| Backend | POC Worker + dedicated D1 + capped live AI; Google OAuth and full MVP schema remain open |
 | Next task | **UI-01: Application shell and routes** |
 | Active task | None |
-| External setup needed later | Cloudflare account/bindings and Google OAuth credentials; no secrets in Git |
+| External setup needed later | Google OAuth credentials for AUTH-01; Cloudflare POC is deployed; no secrets in Git |
 
 ## How to use this tracker
 
@@ -30,6 +30,14 @@ Suggested session prompt:
 - [x] **SETUP-02 — Frontend scaffold:** Next.js App Router, TypeScript, pinned Astryx packages, Matcha production CSS/fonts, and static export configured.
 - [x] **SETUP-03 — Starter verification:** lint, types, static production build, Astryx diagnostics without failures, and starter browser checks at desktop/mobile widths.
 - [x] **SETUP-04 — Repository baseline:** planning and scaffold committed and pushed to `origin/main`.
+
+## Deployment proof completed before MVP phases
+
+- [x] **POC-01 — Browser-isolated Cloudflare deployment proof:** frontend + Worker + dedicated D1 + live AI extraction + confirmed/manual saves + SQL totals deployed and exercised. Uses anonymous seven-day browser sessions by explicit user choice. Local/remote isolation and idempotency checks passed. See [deployment record](docs/poc-deployment.md).
+
+- [x] **POC-02 — Organization failure fix:** reproduced salary extraction returning a null description; added safe description fallback, clarification for incomplete financial fields, categorized privacy-safe diagnostics, and fresh-request retries after unavailable results. Verified repeated live salary/expense requests and browser retry regression.
+
+The proof is a deliberately smaller implementation. The API/database/UI tasks below remain open where their full acceptance criteria are not met: no Google login, full conversation/draft lifecycle, saved-record edits/deletion, CSV, charts, or measured production-cost guarantee. Reuse POC lessons rather than treating its schema as the production schema. Before a public pilot, measure request CPU/AI usage, test quota exhaustion and retention, and complete the security/identity tasks.
 
 ## Phase 1: Application UI with fixtures
 
@@ -87,6 +95,9 @@ Append one row after each implementation session. Link the commit only if one wa
 | Task | Outcome and checks | Remaining work / next step | Commit |
 | --- | --- | --- | --- |
 | SETUP-01–04 | Planning and frontend scaffold completed; starter build/lint/types/Astryx/browser checks passed | Start UI-01; all application/backend features remain open | `4b17397`, `a6acd5a` |
+| POC-01 | Dedicated Cloudflare deployment; local/remote D1 isolation/concurrency/totals and live AI extraction/confirmation verified; responsive local browser checks passed | UI-01 next; full MVP tasks and production CPU/cost/retention verification remain open; see deployment record | Not committed |
+
+| POC-02 | Salary null-description regression and unchanged-text failure retry fixed; unit/type/lint/build/Astryx checks passed; live salary twice then expense and browser retry verified | Deployed version `05fed95b-f94b-4d5f-9f95-fd14ee998f51`; continue UI-01 | Not committed |
 
 ## References
 

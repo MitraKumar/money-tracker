@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "money-tracker-poc",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
+    "html_handling": "force-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "money-tracker-poc",
+    "database_id": "ce326686-3f42-487f-a64c-bbce1e9a7a73",
+    "migrations_dir": "migrations"
+  }],
+  "ai": { "binding": "AI" },
+  "vars": { "AI_ENABLED": "true" },
+  "triggers": { "crons": ["0 3 * * *"] },
+  "observability": { "enabled": false }
+}
