@@ -1,0 +1,5 @@
+@import '@astryxdesign/core/reset.css';
+@import '@astryxdesign/core/astryx.css';
+
+* { box-sizing: border-box; }
+body { margin: 0; }
