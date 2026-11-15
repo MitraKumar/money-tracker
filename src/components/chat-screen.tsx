@@ -38,7 +38,7 @@ export function ChatScreen() {
   const entryBlocked = !!activePreview;
   const actionsDisabled=busy||!ready||!!draft||(entryBlocked && activePreview?.status !== "needs-clarification");
   return <>
-    {isMobile ? <Text as="h1" type="large" weight="semibold" style={{margin:0,flexShrink:0}}>Add an entry</Text> : <PageHeading eyebrow="YOUR DAILY CHECK-IN" title="Small entries. A clearer picture." description="Tell us what came in or went out. Review every detail before it becomes a record." />}
+    {!isMobile && <PageHeading eyebrow="YOUR DAILY CHECK-IN" title="Small entries. A clearer picture." description="Tell us what came in or went out. Review every detail before it becomes a record." />}
     {(!isMobile || !ready) && <ConnectionStatus />}
     <VStack gap={isMobile ? 3 : 8} width="100%" style={isMobile ? {flex:"1 1 0%",minHeight:0} : undefined}>
       <VStack as="section" gap={isMobile ? 2 : 5} aria-label="Chat entry" style={isMobile ? {flex:"1 1 0%",minHeight:0} : undefined}>
@@ -46,8 +46,7 @@ export function ChatScreen() {
           <VStack gap={3} style={{height:"100%", minHeight:0,flex:"1 1 0%"}}>
             <ChatMessageList align={isMobile && !chatLines.length ? "bottom" : "top"} density={isMobile ? "compact" : "balanced"} style={{flex:"1 1 0%", minHeight:0, overflowY:"auto", overflowX:"hidden"}}>
               {chatLines.length === 0 ? <VStack gap={3} padding={isMobile ? 0 : 3}>
-                {isMobile ? <Text type="supporting">What came in or went out?</Text>
-                  : <Heading level={2} style={{fontFamily:"var(--font-family-body)"}}>What came in or went out?</Heading>}
+                {!isMobile && <Heading level={2} style={{fontFamily:"var(--font-family-body)"}}>What came in or went out?</Heading>}
               </VStack> : [...groups].map(([day, lines]) => <VStack key={day} gap={4} as="section" aria-label={day}>
                 <ChatSystemMessage variant="divider">{day}</ChatSystemMessage>
                 {lines.map(line => <ChatMessage key={line.id} sender={line.sender}>

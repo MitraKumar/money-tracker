@@ -17,7 +17,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-theme="light" data-astryx-theme="matcha">
+    <html lang="en" data-theme="system" data-astryx-theme="matcha" suppressHydrationWarning>
       <body>
         <PwaRegistration />
         <AppTheme><TrackerProvider><TrackerShell>{children}</TrackerShell></TrackerProvider></AppTheme>

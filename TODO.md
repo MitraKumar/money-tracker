@@ -11,7 +11,7 @@ This is the implementation tracker across sessions. The architecture documents d
 | Working product | Deployed account-owned POC: AI/manual confirmation, transaction details/edit/delete, monthly charts/totals and CSV |
 | Backend | Worker + D1 + capped live AI + configured Google OAuth; Google sign-in confirmed by user; full MVP schema remains open |
 | Next task | **PWA-03 — connection/install/update experience; UI-07 and DATA-02 remain open** |
-| Active task | **None — PWA-01/02 implemented and checked locally** |
+| Active task | **None — UI-11 dark mode completed** |
 | External setup needed later | OAuth secrets/callback configured; Google sign-in confirmed; remaining OPS-01 checks cover live cross-browser access/isolation, logout, and runtime usage |
 
 ## How to use this tracker
@@ -55,6 +55,9 @@ Build realistic UI states before connecting the backend. Keep fixture data clear
 - [x] **UI-09 — Navigation icons** · Add icons to Chat, Overview, Transactions, and Settings. Desktop keeps text labels; mobile uses four equal-width icon-only links with accessible labels, tooltips, and current-page state. Verified keyboard navigation and viewport fit at desktop/mobile/compact widths.
 
 - [x] **UI-10 — Compact transaction toolbar** · Search with clear control beside Filters and separate Sort. Desktop popover/mobile bottom sheet with staged type/category/date filters, Apply/Reset/Cancel, removable active filters, conditional Clear all, and one matching-count/totals summary. Month remains the primary date scope; filters remain client-side within the pilot limit.
+
+- [x] **UI-11 — Dark mode:** Matcha light/dark/system modes, device preference by default, browser-persisted Settings selector, and cross-tab preference updates. Static architecture preserved.
+
 
 ## Phase 2: Cloudflare runtime and identity
 
@@ -194,6 +197,9 @@ Append one row after each implementation session. Link the commit only if one wa
 
 | PWA-01 / PWA-02 | Added static manifest, Matcha-derived ledger PNG/maskable/Apple/favicon assets, standalone metadata, production-only registration, versioned generic offline fallback, API/mutation/cache exclusions, waiting-worker updates, and static headers. Fixed canonical fallback URL to `/offline/` after real Wrangler redirect regression. All five unit/integration files passed; 12 Chromium PWA/navigation/sign-out checks passed at desktop/mobile/compact widths; maskable icon and mobile fallback screenshot inspected. Lint (existing unused-user warning), types, production export, Astryx (existing font warnings; zero failures), deployment dry run, and whitespace check passed | PWA-03 next. Committed at user request; no deployment or push. Real-device installation/standalone OAuth and deployed headers remain PWA-04; no private offline data or background writes | This commit |
 
+
+| Mobile swipe removal | Reverted mobile swipe hook, shell integration, page animations, gesture tests, and UI-plan additions at user request. Preserved unrelated Chat/login/overview edits. Typecheck, removal-reference search, and diff whitespace checks passed | PWA-03 remains next; no commit, push, or deployment | Not committed |
+
 ## PWA extension
 
 See [PWA plan](docs/pwa-plan.md) for scope, file changes, cache policy, dependencies, and acceptance criteria. Preserve static export and the Cloudflare API architecture.
@@ -212,3 +218,7 @@ See [PWA plan](docs/pwa-plan.md) for scope, file changes, cache policy, dependen
 - [Application approach](docs/approach.md)
 - [Cloudflare feasibility](docs/cloudflare-feasibility.md)
 - [Development commands and known setup limitations](README.md)
+
+| Overview button consistency | Changed “Go to chat” and “View transactions” from ghost to secondary to match the Transactions toolbar. Focused lint passed with existing unused-user warning; standalone TypeScript passed; Astryx reported zero failures against existing out (font warnings). Production compilation passed but build stopped because Next could not parse TypeScript --showConfig output | PWA-03 remains next; build environment issue remains. No commit/push | Not committed |
+
+| UI-11 dark mode | Enabled built-in Matcha light/dark/system modes and a browser-persisted Appearance selector in Settings; system is the default, cross-tab changes synchronize, unavailable storage falls back to the session. Lint/types passed; production static build passed outside sandbox (sandbox reproduced existing TypeScript configuration parse error); Astryx on fresh out passed with zero failures and existing font warnings. Chromium static-export checks passed for system mode, Light selection/reload persistence, Dark selection and 390px viewport fit; mobile dark screenshot inspected | PWA-03 remains next; no commit, push, or deployment | Not committed |

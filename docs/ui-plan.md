@@ -8,7 +8,7 @@ Use [Astryx with the Matcha theme](https://astryx.atmeta.com/themes?theme=matcha
 
 The [theme documentation](https://astryx.atmeta.com/docs/theme) describes Matcha as earthy greens with DM Sans and Playwrite US Trad typography. Use the installed theme's actual semantic tokens rather than inventing approximate hex values. Reserve expressive typography for a short welcome heading or brand accent; amounts, dates, labels, tables, and chat use the readable body type. Exact visual tuning will be reviewed in the rendered app.
 
-Keep light mode as the initial design reference. Check the installed Matcha theme's supported modes before promising a dark-mode option. Use restrained surfaces, subtle borders, one clear primary action per card, and tabular numerals for money. Green is the brand accent; distinguish income and expenses with explicit words and signs as well as color.
+Use Matcha’s built-in light and dark palettes. Appearance in Settings offers System (the default), Light, and Dark; save the choice in this browser and synchronize changes between tabs. System follows device appearance changes. Use restrained surfaces, subtle borders, one clear primary action per card, and tabular numerals for money. Green is the brand accent; distinguish income and expenses with explicit words and signs as well as color.
 
 ## Navigation and screen map
 

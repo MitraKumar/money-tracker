@@ -36,7 +36,7 @@ export function MonthFilter() {
 export function TransactionRows({ transactions }: { transactions: Transaction[] }) {
   if (!transactions.length) return <VStack gap={3} paddingBlock={6}>
     <Text weight="medium">No entries to show</Text><Text color="secondary">Add an entry in Chat, or choose another month.</Text>
-    <Button label="Go to chat" href="/chat" as={Link} variant="ghost" />
+    <Button label="Go to chat" href="/chat" as={Link} variant="secondary" />
   </VStack>;
   return <List edge="flush">{transactions.map((entry) => <ListItem key={entry.id}
     label={<Text weight="medium">{entry.description}</Text>}
